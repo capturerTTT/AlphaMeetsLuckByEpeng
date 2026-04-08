@@ -1,0 +1,5 @@
+{
+  "name": "股票算命大师",
+  "description": "A non-professional, AI-powered investment assistant providing deep, hedge-fund style analysis of stocks using reasoning and search capabilities.",
+  "requestFramePermissions": []
+}
