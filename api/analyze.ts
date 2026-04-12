@@ -152,8 +152,9 @@ async function analyzeWithGemini(query: string, language: string) {
   const attempts = [
     { model: PRO_MODEL,   wait: 0    },
     { model: FLASH_MODEL, wait: 0    },
-    { model: PRO_MODEL,   wait: 2000 },
-    { model: FLASH_MODEL, wait: 2000 },
+    { model: PRO_MODEL,   wait: 3000 },
+    { model: FLASH_MODEL, wait: 3000 },
+    { model: FLASH_MODEL, wait: 5000 },
   ];
 
   let lastError: any;
@@ -187,9 +188,17 @@ async function analyzeWithGemini(query: string, language: string) {
       return { ...data, sources };
     } catch (err: any) {
       lastError = err;
-      const msg = err?.message ?? '';
-      const isRateLimit = msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
-      if (!isRateLimit) throw err;
+      const msg = (err?.message ?? '').toString();
+      const isRetryable =
+        msg.includes('429') ||
+        msg.includes('503') ||
+        msg.includes('quota') ||
+        msg.includes('RESOURCE_EXHAUSTED') ||
+        msg.includes('UNAVAILABLE') ||
+        msg.includes('overloaded') ||
+        msg.includes('high demand');
+      if (!isRetryable) throw err;
+      console.warn(`[analyze] Retryable error on ${attempt.model}: ${msg.slice(0, 120)}`);
     }
   }
   throw lastError;
