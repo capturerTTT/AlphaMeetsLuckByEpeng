@@ -14,8 +14,8 @@ enum DecisionType {
 }
 
 // ─── Gemini config ────────────────────────────────────────────────────────────
-const PRO_MODEL   = 'gemini-2.0-flash';
-const FLASH_MODEL = 'gemini-1.5-flash';
+const PRO_MODEL   = 'gemini-2.5-pro';
+const FLASH_MODEL = 'gemini-2.5-flash';
 
 const GEMINI_SYSTEM_EN = `
 You are "StockGemini", a 20-year veteran hedge fund analyst.
