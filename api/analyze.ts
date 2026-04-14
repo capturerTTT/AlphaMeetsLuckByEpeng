@@ -351,29 +351,28 @@ ${pillarsStr}
 出生地：${baziInfo.birthLocation}
 
 【股票信息】
-代码/名称：${stockSymbol} / ${query}
-当前分析研判：${stockDecision}
-分析师核心论点：${stockThesis}
+代码/名称：${query}
+（请根据该股票/公司的行业、业务性质，自行判断其五行属性）
 
 【当前时间】${currentYear}年${currentMonth}月
 
 请根据以上信息，做出这只股票与该投资者的命理匹配度分析。
-考虑：股票行业五行属性、投资者日元及喜用神、当月流月、当年流年（${currentYear}年）、长期命局。
+考虑：股票行业五行属性、投资者日元及喜用神、当月流月（${currentYear}年${currentMonth}月）、当年流年（${currentYear}年）、长期命局。
 每个时间维度给出0-100的匹配分数。总分亦为0-100。
 用算命大师的口吻写，但要幽默毒舌，不要正经。`
     : `[Investor BaZi]
 ${pillarsStr}
 Birth location: ${baziInfo.birthLocation}
 
-[Stock Info]
-Ticker/Name: ${stockSymbol} / ${query}
-Analyst verdict: ${stockDecision}
-Core thesis: ${stockThesis}
+[Stock]
+Ticker/Name: ${query}
+(Determine the stock's Five Element nature yourself based on its industry and business type)
 
 [Current date] ${currentYear}-${String(currentMonth).padStart(2,'0')}
 
 Perform a BaZi compatibility reading between this stock and this investor.
-Consider: stock's Five Element nature based on industry, investor's day master element, monthly flow (${currentMonth}/${currentYear}), yearly flow (${currentYear}), and long-term compatibility.
+Consider: stock's Five Element nature based on industry, investor's day master element,
+monthly flow (${currentMonth}/${currentYear}), yearly flow (${currentYear}), and long-term compatibility.
 Score each timeframe 0-100 and overall 0-100.
 Write in fortune-teller style with humor and some edge.`;
 
@@ -470,29 +469,44 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 1. Run stock analysis
+    const hasBazi = bazi && bazi.birthYear && bazi.birthLocation;
+
+    if (hasBazi) {
+      // ── Run BOTH calls in PARALLEL so total time = max(stock, fortune) not sum ──
+      const [stockResult, fortuneResult] = await Promise.allSettled([
+        model === 'claude'
+          ? analyzeWithClaude(query.trim(), language)
+          : analyzeWithGemini(query.trim(), language),
+        // Fortune reading uses a placeholder thesis since we don't have the stock result yet.
+        // We pass the raw query — the fortune AI will determine stock element from the name.
+        analyzeCompatibility(
+          query.trim(),
+          query.trim(),   // symbol placeholder — AI infers from query
+          'NEUTRAL',       // decision placeholder
+          '',              // thesis placeholder
+          bazi as BaziInfo,
+          language,
+        ),
+      ]);
+
+      if (stockResult.status === 'rejected') {
+        throw stockResult.reason;
+      }
+
+      const result = stockResult.value;
+      const fortune = fortuneResult.status === 'fulfilled' ? fortuneResult.value : null;
+
+      if (fortuneResult.status === 'rejected') {
+        console.warn('[/api/analyze] Fortune reading failed (non-fatal):', fortuneResult.reason?.message);
+      }
+
+      return res.status(200).json({ ...result, compatibility: fortune });
+    }
+
+    // No BaZi — just stock analysis
     const result = model === 'claude'
       ? await analyzeWithClaude(query.trim(), language)
       : await analyzeWithGemini(query.trim(), language);
-
-    // 2. If BaZi info provided, run fortune reading in parallel (best-effort)
-    if (bazi && bazi.birthYear && bazi.birthLocation) {
-      try {
-        const fortune = await analyzeCompatibility(
-          query.trim(),
-          result.stockData?.symbol ?? query.trim(),
-          result.decision ?? 'NEUTRAL',
-          result.mainThesis ?? '',
-          bazi as BaziInfo,
-          language,
-        );
-        return res.status(200).json({ ...result, compatibility: fortune });
-      } catch (fortuneErr: any) {
-        console.warn('[/api/analyze] Fortune reading failed (non-fatal):', fortuneErr?.message);
-        // Return stock result without fortune — don't break the main analysis
-        return res.status(200).json({ ...result, compatibility: null });
-      }
-    }
 
     return res.status(200).json(result);
   } catch (err: any) {
