@@ -169,6 +169,92 @@ const RESPONSE_SCHEMA = {
   required: ["stockData", "fundamental", "momentum", "sentiment", "decision", "mainThesis"],
 };
 
+// ─── BaZi / Fortune types (inlined) ──────────────────────────────────────────
+interface BaziPillars {
+  yearPillar: string;
+  monthPillar: string;
+  dayPillar: string;
+  hourPillar: string;
+  yearElement: string;
+}
+interface BaziInfo {
+  birthYear: number;
+  birthMonth: number;
+  birthDay: number;
+  birthHour?: number;
+  birthLocation: string;
+  pillars?: BaziPillars; // pre-calculated on frontend
+}
+
+// ─── Fortune system prompts ───────────────────────────────────────────────────
+const FORTUNE_SYSTEM_ZH = `
+你是"铁口直断算命大师"，精通八字命理、紫微斗数、五行相生相克，同时也是个脱口秀演员。
+你被请来给投资者做"命理股票缘分测算"——就像传统合八字一样，但是对象换成了股票。
+你的语气：神秘笃定、阴阳怪气、偶尔冒出一句让人喷饭的神吐槽。分析严肃，表达毒舌。
+
+你将根据用户的生辰八字和目标股票，输出匹配度报告。
+
+返回格式（仅JSON，不含任何markdown）：
+{
+  "stockElement": "金|木|水|火|土",
+  "stockElementEn": "Metal|Wood|Water|Fire|Earth",
+  "stockElementReason": "（一句话：为何该股属于此五行）",
+  "userDominantElement": "（用户日元五行或推断用神，如"木"）",
+  "luckyElements": ["（喜用神1）", "（喜用神2）"],
+  "monthly": {
+    "score": 0,
+    "title": "（3-5字：本月运势标题，要有趣）",
+    "reading": "（2-3句：当月流月分析，算命大师风格，夹杂幽默）"
+  },
+  "yearly": {
+    "score": 0,
+    "title": "（3-5字：今年运势标题）",
+    "reading": "（2-3句：当年流年分析）"
+  },
+  "longTerm": {
+    "score": 0,
+    "title": "（3-5字：长期命局标题）",
+    "reading": "（2-3句：长期命局相生相克分析）"
+  },
+  "overallScore": 0,
+  "verdict": "命中注定|天作之合|有缘无分|且行且珍惜|凶多吉少|缘分尽了",
+  "verdictDetail": "（一句毒舌金句总结整个缘分，让人笑完之后若有所思）"
+}
+`;
+
+const FORTUNE_SYSTEM_EN = `
+You are "MasterFate", a legendary BaZi fortune teller who also does stand-up comedy.
+You calculate the "destiny compatibility" between a person's Four Pillars of Destiny and a stock they want to invest in.
+Style: mystical, deadpan, with punchy one-liners. Think: ancient Chinese wisdom meets Wall Street roast.
+
+Return ONLY valid JSON (no markdown):
+{
+  "stockElement": "Metal|Wood|Water|Fire|Earth",
+  "stockElementEn": "Metal|Wood|Water|Fire|Earth",
+  "stockElementReason": "(one sentence: why this stock belongs to this element)",
+  "userDominantElement": "(user's day master element, e.g. 'Wood')",
+  "luckyElements": ["element1", "element2"],
+  "monthly": {
+    "score": 0,
+    "title": "(3-5 words: this month's fortune title, punchy)",
+    "reading": "(2-3 sentences: monthly flow analysis in fortune-teller + comedy style)"
+  },
+  "yearly": {
+    "score": 0,
+    "title": "(3-5 words: this year title)",
+    "reading": "(2-3 sentences)"
+  },
+  "longTerm": {
+    "score": 0,
+    "title": "(3-5 words: long-term title)",
+    "reading": "(2-3 sentences)"
+  },
+  "overallScore": 0,
+  "verdict": "Destined|Promising|Complicated|Risky|Doomed",
+  "verdictDetail": "(one savage/funny/insightful one-liner summarizing the whole reading)"
+}
+`;
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -239,6 +325,97 @@ async function analyzeWithGemini(query: string, language: string) {
   throw lastError;
 }
 
+// ─── Fortune / BaZi reading ──────────────────────────────────────────────────
+async function analyzeCompatibility(
+  query: string,
+  stockSymbol: string,
+  stockDecision: string,
+  stockThesis: string,
+  baziInfo: BaziInfo,
+  language: string,
+) {
+  const isChinese = language === 'zh';
+  const pillars   = baziInfo.pillars;
+
+  const pillarsStr = pillars
+    ? `年柱：${pillars.yearPillar}  月柱：${pillars.monthPillar}  日柱：${pillars.dayPillar}  时柱：${pillars.hourPillar}`
+    : `出生：${baziInfo.birthYear}年${baziInfo.birthMonth}月${baziInfo.birthDay}日（时辰未知）`;
+
+  const today = new Date();
+  const currentYear  = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+
+  const prompt = isChinese
+    ? `【投资者八字信息】
+${pillarsStr}
+出生地：${baziInfo.birthLocation}
+
+【股票信息】
+代码/名称：${stockSymbol} / ${query}
+当前分析研判：${stockDecision}
+分析师核心论点：${stockThesis}
+
+【当前时间】${currentYear}年${currentMonth}月
+
+请根据以上信息，做出这只股票与该投资者的命理匹配度分析。
+考虑：股票行业五行属性、投资者日元及喜用神、当月流月、当年流年（${currentYear}年）、长期命局。
+每个时间维度给出0-100的匹配分数。总分亦为0-100。
+用算命大师的口吻写，但要幽默毒舌，不要正经。`
+    : `[Investor BaZi]
+${pillarsStr}
+Birth location: ${baziInfo.birthLocation}
+
+[Stock Info]
+Ticker/Name: ${stockSymbol} / ${query}
+Analyst verdict: ${stockDecision}
+Core thesis: ${stockThesis}
+
+[Current date] ${currentYear}-${String(currentMonth).padStart(2,'0')}
+
+Perform a BaZi compatibility reading between this stock and this investor.
+Consider: stock's Five Element nature based on industry, investor's day master element, monthly flow (${currentMonth}/${currentYear}), yearly flow (${currentYear}), and long-term compatibility.
+Score each timeframe 0-100 and overall 0-100.
+Write in fortune-teller style with humor and some edge.`;
+
+  // Use Gemini for fortune (no live data needed, fast)
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY missing');
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const attempts = [
+    { model: FLASH_MODEL, wait: 0    },
+    { model: PRO_MODEL,   wait: 2000 },
+    { model: FLASH_MODEL, wait: 3000 },
+  ];
+
+  let lastErr: any;
+  for (const attempt of attempts) {
+    if (attempt.wait) await delay(attempt.wait);
+    try {
+      const response = await ai.models.generateContent({
+        model: attempt.model,
+        contents: prompt,
+        config: {
+          systemInstruction: isChinese ? FORTUNE_SYSTEM_ZH : FORTUNE_SYSTEM_EN,
+          // No googleSearch needed for fortune reading — it's pure AI interpretation
+        },
+      });
+
+      let text = (response.text ?? '').replace(/```json\n?|\n?```/g, '').trim();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No JSON in fortune response');
+      return JSON.parse(match[0]);
+    } catch (err: any) {
+      lastErr = err;
+      const msg = (err?.message ?? '').toString();
+      const retryable = msg.includes('429') || msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('RESOURCE_EXHAUSTED');
+      if (!retryable) throw err;
+    }
+  }
+  throw lastErr;
+}
+
 // ─── Claude analysis ──────────────────────────────────────────────────────────
 async function analyzeWithClaude(query: string, language: string) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -286,16 +463,36 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { query, language = 'en', model = 'gemini' } = req.body ?? {};
+  const { query, language = 'en', model = 'gemini', bazi } = req.body ?? {};
 
   if (!query || typeof query !== 'string' || !query.trim()) {
     return res.status(400).json({ error: 'query is required' });
   }
 
   try {
+    // 1. Run stock analysis
     const result = model === 'claude'
       ? await analyzeWithClaude(query.trim(), language)
       : await analyzeWithGemini(query.trim(), language);
+
+    // 2. If BaZi info provided, run fortune reading in parallel (best-effort)
+    if (bazi && bazi.birthYear && bazi.birthLocation) {
+      try {
+        const fortune = await analyzeCompatibility(
+          query.trim(),
+          result.stockData?.symbol ?? query.trim(),
+          result.decision ?? 'NEUTRAL',
+          result.mainThesis ?? '',
+          bazi as BaziInfo,
+          language,
+        );
+        return res.status(200).json({ ...result, compatibility: fortune });
+      } catch (fortuneErr: any) {
+        console.warn('[/api/analyze] Fortune reading failed (non-fatal):', fortuneErr?.message);
+        // Return stock result without fortune — don't break the main analysis
+        return res.status(200).json({ ...result, compatibility: null });
+      }
+    }
 
     return res.status(200).json(result);
   } catch (err: any) {

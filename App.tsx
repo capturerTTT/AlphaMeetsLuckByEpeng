@@ -5,20 +5,25 @@ import MatrixCard from './components/MatrixCard';
 import DecisionBadge from './components/DecisionBadge';
 import HistorySidebar from './components/HistorySidebar';
 import CopyButton from './components/CopyButton';
-import { analyzeStock } from './services/apiService';
-import { InvestmentReport, Language, ModelProvider } from './types';
-import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Share2, Download, BrainCircuit } from 'lucide-react';
+import BaziInput from './components/BaziInput';
+import CompatibilityPanel from './components/CompatibilityPanel';
+import { analyzeStock, FullReport } from './services/apiService';
+import { InvestmentReport, Language, ModelProvider, BaziInfo } from './types';
+import { calculatePillars } from './utils/bazi';
+import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Share2, BrainCircuit, Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
   const [language, setLanguage] = useState<Language>('en');
   const [model, setModel] = useState<ModelProvider>('gemini');
-  const [report, setReport] = useState<InvestmentReport | null>(null);
+  const [report, setReport] = useState<FullReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fortuneLoading, setFortuneLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
-  
+  const [baziInfo, setBaziInfo] = useState<BaziInfo | null>(null);
+
   // History State
   const [history, setHistory] = useState<InvestmentReport[]>(() => {
     try {
@@ -36,19 +41,27 @@ const App: React.FC = () => {
 
   const addToHistory = (newReport: InvestmentReport) => {
     setHistory(prev => {
-      // Remove duplicates of the same stock symbol to keep only the latest version
       const filtered = prev.filter(item => item.stockData.symbol !== newReport.stockData.symbol);
-      // Add new report to top, limit to 20
       return [newReport, ...filtered].slice(0, 20);
     });
   };
 
   const handleHistorySelect = (selectedReport: InvestmentReport) => {
-    setReport(selectedReport);
+    setReport(selectedReport as FullReport);
     setQuery(selectedReport.stockData.symbol);
     setIsHistoryOpen(false);
     setError(null);
-    // We do NOT trigger a new analysis here, just restore the view.
+  };
+
+  // Enrich BaziInfo with pre-calculated pillars before sending
+  const enrichBazi = (info: BaziInfo | null): BaziInfo | null => {
+    if (!info) return null;
+    try {
+      const pillars = calculatePillars(info);
+      return { ...info, pillars };
+    } catch {
+      return info;
+    }
   };
 
   const fetchAnalysis = async (searchQuery: string, targetLanguage: Language, activeModel: ModelProvider = model) => {
@@ -57,10 +70,12 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    // Show fortune loading indicator if bazi is set
+    if (baziInfo) setFortuneLoading(true);
+
     try {
-      // All AI calls go through the server-side /api/analyze endpoint.
-      // API keys are never sent to the browser.
-      const data = await analyzeStock(searchQuery, targetLanguage, activeModel);
+      const enrichedBazi = enrichBazi(baziInfo);
+      const data = await analyzeStock(searchQuery, targetLanguage, activeModel, enrichedBazi);
       setReport(data);
       addToHistory(data);
     } catch (err: any) {
@@ -83,30 +98,24 @@ const App: React.FC = () => {
       }
     } finally {
       setLoading(false);
+      setFortuneLoading(false);
     }
   };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Auto-detect Chinese input
     const hasChinese = /[\u4e00-\u9fa5]/.test(query);
     let targetLang = language;
-    
     if (hasChinese && language !== 'zh') {
       setLanguage('zh');
       targetLang = 'zh';
     }
-
-    // Clear report only on explicit new search to show fresh state
     setReport(null);
     await fetchAnalysis(query, targetLang);
   };
 
-  // Re-analyze when language changes, if a report is already present
   useEffect(() => {
     if (report) {
-      // Use the symbol from the current report to ensure consistency
       fetchAnalysis(report.stockData.symbol, language);
     }
   }, [language]);
@@ -114,26 +123,21 @@ const App: React.FC = () => {
   const handleShare = async () => {
     if (!report) return;
     setIsCapturing(true);
-
     const element = document.getElementById('report-capture-area');
     if (element) {
       try {
         const canvas = await html2canvas(element, {
           backgroundColor: '#0f172a',
-          scale: 2, // Higher resolution
+          scale: 2,
           useCORS: true,
           logging: false
         });
-
         const image = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        
         const date = new Date().toISOString().split('T')[0];
         const stockName = report.stockData.symbol;
-        const filename = `《${stockName}》的《${date}》运势.png`;
-        
         link.href = image;
-        link.download = filename;
+        link.download = `《${stockName}》的《${date}》运势.png`;
         link.click();
       } catch (e) {
         console.error("Screenshot failed:", e);
@@ -142,10 +146,9 @@ const App: React.FC = () => {
     setIsCapturing(false);
   };
 
-  const isPositiveChange = report?.stockData.changePercent.startsWith('+') || 
+  const isPositiveChange = report?.stockData.changePercent.startsWith('+') ||
                            (report && !report.stockData.changePercent.startsWith('-'));
 
-  // Translations
   const t = {
     titlePrefix: language === 'en' ? "Where is the " : "",
     alpha: language === 'en' ? "Alpha" : "宝贝股票",
@@ -160,26 +163,21 @@ const App: React.FC = () => {
     thesisHeader: language === 'en' ? "Analyst's Spicy Diagnosis" : "分析师毒舌号脉",
     sources: language === 'en' ? "Live Data Sources" : "实时数据来源",
     noSources: language === 'en' ? "Data synthesized from internal knowledge base." : "数据基于内部知识库综合生成。",
-    cached: language === 'en' ? "Viewing cached result." : "当前为历史快照。",
-    refresh: language === 'en' ? "Refresh Analysis" : "重新分析",
+    fortuneLoading: language === 'en' ? "🔮 The master is reading your fate..." : "🔮 大师正在掐指一算，请稍候...",
   };
 
   return (
     <div className="min-h-screen bg-gemini-dark text-slate-200 font-sans selection:bg-gemini-accent selection:text-white overflow-x-hidden relative">
-      
+
       {/* Feng Shui Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-10">
-        {/* Large Rotating Bagua/Octagon */}
         <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] border-8 border-slate-600/30 rounded-full animate-spin-slow">
            <div className="absolute inset-4 border border-slate-600/20 rounded-full"></div>
-           {/* Bagua Lines simulation */}
            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-slate-600/20"></div>
            <div className="absolute top-1/2 left-0 -translate-y-1/2 w-full h-1 bg-slate-600/20"></div>
            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-slate-600/20 rotate-45"></div>
            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-slate-600/20 -rotate-45"></div>
         </div>
-
-        {/* Tai Chi Symbol hint in bottom right */}
         <div className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full border border-slate-500/20 opacity-20 animate-reverse-spin-slow flex items-center justify-center">
             <div className="w-full h-1/2 bg-slate-500/10 rounded-t-full absolute top-0"></div>
             <div className="w-1/2 h-full bg-slate-500/10 rounded-l-full absolute left-0"></div>
@@ -197,22 +195,22 @@ const App: React.FC = () => {
           setModel={setModel}
         />
 
-        <HistorySidebar 
-          isOpen={isHistoryOpen} 
+        <HistorySidebar
+          isOpen={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
           history={history}
           onSelect={handleHistorySelect}
         />
 
         <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 pb-24">
-          
+
           {/* Search Section */}
-          <section className="mb-12 max-w-2xl mx-auto text-center">
+          <section className="mb-8 max-w-2xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
               {t.titlePrefix}<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{t.alpha}</span>{t.titleSuffix}
             </h2>
-            
-            <form onSubmit={handleSearch} className="relative group">
+
+            <form onSubmit={handleSearch} className="relative group mb-4">
               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                 <Search className="w-5 h-5 text-slate-500 group-focus-within:text-gemini-accent transition-colors" />
               </div>
@@ -223,8 +221,8 @@ const App: React.FC = () => {
                 placeholder={t.placeholder}
                 className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-gemini-accent focus:border-transparent outline-none text-lg text-white placeholder-slate-500 transition-all shadow-lg backdrop-blur-sm"
               />
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading || !query.trim()}
                 className="absolute right-2 top-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/20"
               >
@@ -235,9 +233,15 @@ const App: React.FC = () => {
                 )}
               </button>
             </form>
-            <p className="mt-4 text-sm text-slate-500">
-              {t.supportText}
-            </p>
+
+            <p className="mb-5 text-sm text-slate-500">{t.supportText}</p>
+
+            {/* BaZi Input — collapsible fortune toggle */}
+            <BaziInput
+              baziInfo={baziInfo}
+              onBaziChange={setBaziInfo}
+              language={language}
+            />
           </section>
 
           {/* Error State */}
@@ -258,21 +262,25 @@ const App: React.FC = () => {
                 <div className="h-64 bg-slate-800/50 rounded-xl"></div>
               </div>
               <div className="h-32 bg-slate-800/50 rounded-xl w-full"></div>
+              {baziInfo && (
+                <div className="mt-6 flex items-center justify-center gap-3 text-amber-400/70 text-sm">
+                  <Sparkles className="w-4 h-4 animate-pulse" />
+                  <span>{t.fortuneLoading}</span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Results Section - Wrapped for Screenshot */}
+          {/* Results Section */}
           {report && !loading && (
             <div id="report-capture-area" className="animate-fade-in-up max-w-6xl mx-auto space-y-8 p-4 md:p-6 rounded-3xl bg-gemini-dark/80 backdrop-blur-sm border border-slate-800/50">
-              
+
               {/* 1. Real-time Dashboard Bar */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="lg:col-span-3 bg-gemini-card border border-slate-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
-                  {/* Subtle BG pattern for card */}
                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                     <BrainCircuit className="w-32 h-32" />
                   </div>
-
                   <div className="relative z-10">
                     <h2 className="text-3xl font-bold text-white tracking-tight">{report.stockData.symbol}</h2>
                     <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
@@ -281,7 +289,6 @@ const App: React.FC = () => {
                        <span className="font-mono text-slate-500 text-xs">{report.stockData.lastUpdated}</span>
                     </div>
                   </div>
-                  
                   <div className="flex flex-wrap gap-8 items-end relative z-10">
                     <div>
                       <span className="block text-xs text-slate-500 font-mono uppercase">{t.price}</span>
@@ -304,14 +311,12 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Decision Badge */}
                 <div className="lg:col-span-1">
                   <DecisionBadge decision={report.decision} language={language} />
                 </div>
               </div>
 
-              {/* 2. The Thesis (Chat bubble style) */}
+              {/* 2. The Thesis */}
               <div className="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-xl p-6 md:p-8 relative overflow-hidden group shadow-lg">
                  <div className="absolute top-0 left-0 w-1 h-full bg-gemini-gold"></div>
                  <h3 className="text-gemini-gold font-mono text-xs tracking-widest uppercase mb-3 flex items-center gap-2">
@@ -330,7 +335,12 @@ const App: React.FC = () => {
                 <MatrixCard type="Sentiment" data={report.sentiment} language={language} />
               </div>
 
-              {/* 4. Sources / Grounding */}
+              {/* 4. BaZi Compatibility Panel */}
+              {report.compatibility && (
+                <CompatibilityPanel reading={report.compatibility} language={language} />
+              )}
+
+              {/* 5. Sources */}
               <div className="pt-8 border-t border-slate-800">
                  <div className="flex items-center gap-3 mb-4">
                    <h4 className="text-sm font-semibold text-slate-500">{t.sources}</h4>
