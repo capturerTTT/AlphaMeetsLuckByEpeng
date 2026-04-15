@@ -494,10 +494,16 @@ export default async function handler(req: any, res: any) {
       }
 
       const result = stockResult.value;
-      const fortune = fortuneResult.status === 'fulfilled' ? fortuneResult.value : null;
+      let fortune = fortuneResult.status === 'fulfilled' ? fortuneResult.value : null;
 
       if (fortuneResult.status === 'rejected') {
         console.warn('[/api/analyze] Fortune reading failed (non-fatal):', fortuneResult.reason?.message);
+      }
+
+      // Inject pre-calculated pillars from frontend into the fortune response
+      // (The AI doesn't return pillars — we calculated them on the frontend)
+      if (fortune && (bazi as BaziInfo).pillars) {
+        fortune.pillars = (bazi as BaziInfo).pillars;
       }
 
       return res.status(200).json({ ...result, compatibility: fortune });

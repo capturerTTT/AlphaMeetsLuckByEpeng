@@ -90,8 +90,18 @@ function TimeframeCard({ title, timeframe, language }: { title: string; timefram
 
 const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, language }) => {
   const isCN = language === 'zh';
+
+  // Defensive: if critical data is missing, don't render at all
+  if (!reading || !reading.stockElement) return null;
+
   const elemColors = ELEMENT_COLORS[reading.stockElement] ?? ELEMENT_COLORS['土'];
   const verdictStyle = VERDICT_STYLE[reading.verdict] ?? 'text-slate-300 border-slate-600 bg-slate-800/40';
+
+  // Provide safe defaults for pillars in case they're missing
+  const pillars = reading.pillars ?? { yearPillar: '?', monthPillar: '?', dayPillar: '?', hourPillar: '?', yearElement: '?' };
+  const monthly  = reading.monthly  ?? { score: 0, title: '-', reading: '-' };
+  const yearly   = reading.yearly   ?? { score: 0, title: '-', reading: '-' };
+  const longTerm = reading.longTerm ?? { score: 0, title: '-', reading: '-' };
 
   const overallLabel = isCN ? '总体匹配' : 'Overall Match';
   const pillarsLabel = isCN ? '你的四柱命盘' : 'Your Four Pillars';
@@ -116,10 +126,10 @@ const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, langua
       <div>
         <p className="text-xs text-slate-500 font-mono mb-3">{pillarsLabel}</p>
         <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-          <PillarBox label={isCN ? '年柱' : 'Year'} value={reading.pillars.yearPillar} />
-          <PillarBox label={isCN ? '月柱' : 'Month'} value={reading.pillars.monthPillar} />
-          <PillarBox label={isCN ? '日柱' : 'Day'}   value={reading.pillars.dayPillar} />
-          <PillarBox label={isCN ? '时柱' : 'Hour'}  value={reading.pillars.hourPillar} />
+          <PillarBox label={isCN ? '年柱' : 'Year'} value={pillars.yearPillar} />
+          <PillarBox label={isCN ? '月柱' : 'Month'} value={pillars.monthPillar} />
+          <PillarBox label={isCN ? '日柱' : 'Day'}   value={pillars.dayPillar} />
+          <PillarBox label={isCN ? '时柱' : 'Hour'}  value={pillars.hourPillar} />
         </div>
       </div>
 
@@ -146,29 +156,29 @@ const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, langua
             <p className="font-bold text-sm text-purple-300">
               {reading.userDominantElement}
             </p>
-            <p className="text-xs text-slate-500">{isCN ? `喜神：${reading.luckyElements.join('、')}` : `Lucky: ${reading.luckyElements.join(', ')}`}</p>
+            <p className="text-xs text-slate-500">{isCN ? `喜神：${(reading.luckyElements ?? []).join('、')}` : `Lucky: ${(reading.luckyElements ?? []).join(', ')}`}</p>
           </div>
         </div>
       </div>
 
       {/* Three Timeframes */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <TimeframeCard title={monthLabel} timeframe={reading.monthly}  language={language} />
-        <TimeframeCard title={yearLabel}  timeframe={reading.yearly}   language={language} />
-        <TimeframeCard title={longLabel}  timeframe={reading.longTerm} language={language} />
+        <TimeframeCard title={monthLabel} timeframe={monthly}  language={language} />
+        <TimeframeCard title={yearLabel}  timeframe={yearly}   language={language} />
+        <TimeframeCard title={longLabel}  timeframe={longTerm} language={language} />
       </div>
 
       {/* Overall Verdict */}
       <div className={`rounded-xl border p-5 flex flex-col md:flex-row md:items-center gap-5 ${verdictStyle}`}>
         <div className="flex items-center gap-4">
-          <ScoreCircle score={reading.overallScore} size={72} />
+          <ScoreCircle score={reading.overallScore ?? 0} size={72} />
           <div>
             <p className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-1">{overallLabel}</p>
-            <p className="text-xl font-bold">{reading.verdict}</p>
+            <p className="text-xl font-bold">{reading.verdict ?? '-'}</p>
           </div>
         </div>
         <div className="md:border-l md:border-slate-700 md:pl-5">
-          <p className="text-sm leading-relaxed text-slate-300 italic">「{reading.verdictDetail}」</p>
+          <p className="text-sm leading-relaxed text-slate-300 italic">「{reading.verdictDetail ?? ''}」</p>
         </div>
       </div>
 

@@ -336,7 +336,7 @@ const App: React.FC = () => {
               </div>
 
               {/* 4. BaZi Compatibility Panel */}
-              {report.compatibility && (
+              {report.compatibility && report.compatibility.stockElement && (
                 <CompatibilityPanel reading={report.compatibility} language={language} />
               )}
 
