@@ -271,11 +271,11 @@ async function analyzeWithGemini(query: string, language: string) {
     : `Analyze: "${query}". Search for LATEST real-time price, day change %, PE ratio, Market Cap. Generate structured JSON report.`;
 
   const attempts = [
-    { model: PRO_MODEL,   wait: 0    },
     { model: FLASH_MODEL, wait: 0    },
-    { model: PRO_MODEL,   wait: 3000 },
-    { model: FLASH_MODEL, wait: 3000 },
-    { model: FLASH_MODEL, wait: 5000 },
+    { model: PRO_MODEL,   wait: 2000 },
+    { model: FLASH_MODEL, wait: 4000 },
+    { model: FLASH_MODEL, wait: 7000 },
+    { model: FLASH_MODEL, wait: 10000 },
   ];
 
   let lastError: any;
@@ -382,10 +382,15 @@ Write in fortune-teller style with humor and some edge.`;
 
   const ai = new GoogleGenAI({ apiKey });
 
+  // Stagger start by 2s so we don't slam the API at the exact same time
+  // as the stock analysis call that runs in parallel.
+  await delay(2000);
+
   const attempts = [
     { model: FLASH_MODEL, wait: 0    },
-    { model: PRO_MODEL,   wait: 2000 },
     { model: FLASH_MODEL, wait: 3000 },
+    { model: FLASH_MODEL, wait: 5000 },
+    { model: FLASH_MODEL, wait: 8000 },
   ];
 
   let lastErr: any;
