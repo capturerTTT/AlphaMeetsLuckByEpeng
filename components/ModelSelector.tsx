@@ -63,7 +63,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ model, setModel, language
       {/* Trigger button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300 transition-all min-w-[130px]"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] sm:text-xs font-mono text-slate-300 transition-all min-w-0 sm:min-w-[130px]"
         title={isChinese ? '切换 AI 模型' : 'Switch AI Model'}
       >
         {current.icon}

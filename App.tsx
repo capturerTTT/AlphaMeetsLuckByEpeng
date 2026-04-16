@@ -14,7 +14,7 @@ import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Sh
 
 const App: React.FC = () => {
   const [query, setQuery] = useState('');
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('zh');
   const [model, setModel] = useState<ModelProvider>('gemini');
   const [report, setReport] = useState<FullReport | null>(null);
   const [loading, setLoading] = useState(false);
@@ -202,39 +202,39 @@ const App: React.FC = () => {
           onSelect={handleHistorySelect}
         />
 
-        <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 pb-24">
+        <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-4 sm:py-8 md:py-12 pb-24">
 
           {/* Search Section */}
-          <section className="mb-8 max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+          <section className="mb-6 sm:mb-8 max-w-2xl mx-auto text-center">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 text-white">
               {t.titlePrefix}<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{t.alpha}</span>{t.titleSuffix}
             </h2>
 
-            <form onSubmit={handleSearch} className="relative group mb-4">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <Search className="w-5 h-5 text-slate-500 group-focus-within:text-gemini-accent transition-colors" />
+            <form onSubmit={handleSearch} className="relative group mb-3 sm:mb-4">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 group-focus-within:text-gemini-accent transition-colors" />
               </div>
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t.placeholder}
-                className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-gemini-accent focus:border-transparent outline-none text-lg text-white placeholder-slate-500 transition-all shadow-lg backdrop-blur-sm"
+                className="w-full pl-10 sm:pl-12 pr-14 sm:pr-4 py-3 sm:py-4 bg-slate-800/50 border border-slate-700 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-gemini-accent focus:border-transparent outline-none text-base sm:text-lg text-white placeholder-slate-500 transition-all shadow-lg backdrop-blur-sm"
               />
               <button
                 type="submit"
                 disabled={loading || !query.trim()}
-                className="absolute right-2 top-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-6 rounded-lg sm:rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/20"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                {loading ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : (
                   <>
-                    {report && report.stockData.symbol === query ? <RotateCcw className="w-4 h-4" /> : <ArrowRight className="w-5 h-5" />}
+                    {report && report.stockData.symbol === query ? <RotateCcw className="w-4 h-4" /> : <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </>
                 )}
               </button>
             </form>
 
-            <p className="mb-5 text-sm text-slate-500">{t.supportText}</p>
+            <p className="mb-4 sm:mb-5 text-xs sm:text-sm text-slate-500">{t.supportText}</p>
 
             {/* BaZi Input — collapsible fortune toggle */}
             <BaziInput
@@ -273,41 +273,42 @@ const App: React.FC = () => {
 
           {/* Results Section */}
           {report && !loading && (
-            <div id="report-capture-area" className="animate-fade-in-up max-w-6xl mx-auto space-y-8 p-4 md:p-6 rounded-3xl bg-gemini-dark/80 backdrop-blur-sm border border-slate-800/50">
+            <div id="report-capture-area" className="animate-fade-in-up max-w-6xl mx-auto space-y-4 sm:space-y-8 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl bg-gemini-dark/80 backdrop-blur-sm border border-slate-800/50">
 
               {/* 1. Real-time Dashboard Bar */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-3 bg-gemini-card border border-slate-700 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="lg:col-span-3 bg-gemini-card border border-slate-700 rounded-xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-6 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none hidden sm:block">
                     <BrainCircuit className="w-32 h-32" />
                   </div>
                   <div className="relative z-10">
-                    <h2 className="text-3xl font-bold text-white tracking-tight">{report.stockData.symbol}</h2>
-                    <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{report.stockData.symbol}</h2>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 mt-1">
                        <span>{t.snapshot}</span>
                        <span className="text-slate-600">•</span>
-                       <span className="font-mono text-slate-500 text-xs">{report.stockData.lastUpdated}</span>
+                       <span className="font-mono text-slate-500 text-[10px] sm:text-xs">{report.stockData.lastUpdated}</span>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-8 items-end relative z-10">
+                  {/* Stats grid — 2x2 on mobile, inline on desktop */}
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-8 items-end relative z-10">
                     <div>
-                      <span className="block text-xs text-slate-500 font-mono uppercase">{t.price}</span>
-                      <span className="text-3xl font-mono font-bold text-white">{report.stockData.price}</span>
+                      <span className="block text-[10px] sm:text-xs text-slate-500 font-mono uppercase">{t.price}</span>
+                      <span className="text-xl sm:text-3xl font-mono font-bold text-white">{report.stockData.price}</span>
                     </div>
                     <div>
-                      <span className="block text-xs text-slate-500 font-mono uppercase">{t.change}</span>
-                      <span className={`text-xl font-mono font-bold ${isPositiveChange ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className="block text-[10px] sm:text-xs text-slate-500 font-mono uppercase">{t.change}</span>
+                      <span className={`text-lg sm:text-xl font-mono font-bold ${isPositiveChange ? 'text-green-400' : 'text-red-400'}`}>
                         {report.stockData.changePercent}
                       </span>
                     </div>
-                    <div className="hidden md:block w-px h-12 bg-slate-700 mx-2"></div>
+                    <div className="hidden sm:block w-px h-12 bg-slate-700 mx-2"></div>
                     <div>
-                      <span className="block text-xs text-slate-500 font-mono uppercase">{t.pe}</span>
-                      <span className="text-xl font-mono text-slate-200">{report.stockData.peRatio}</span>
+                      <span className="block text-[10px] sm:text-xs text-slate-500 font-mono uppercase">{t.pe}</span>
+                      <span className="text-lg sm:text-xl font-mono text-slate-200">{report.stockData.peRatio}</span>
                     </div>
                     <div>
-                      <span className="block text-xs text-slate-500 font-mono uppercase">{t.mktCap}</span>
-                      <span className="text-xl font-mono text-slate-200">{report.stockData.marketCap}</span>
+                      <span className="block text-[10px] sm:text-xs text-slate-500 font-mono uppercase">{t.mktCap}</span>
+                      <span className="text-lg sm:text-xl font-mono text-slate-200">{report.stockData.marketCap}</span>
                     </div>
                   </div>
                 </div>
@@ -317,12 +318,12 @@ const App: React.FC = () => {
               </div>
 
               {/* 2. The Thesis */}
-              <div className="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-xl p-6 md:p-8 relative overflow-hidden group shadow-lg">
+              <div className="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-xl p-4 sm:p-6 md:p-8 relative overflow-hidden group shadow-lg">
                  <div className="absolute top-0 left-0 w-1 h-full bg-gemini-gold"></div>
-                 <h3 className="text-gemini-gold font-mono text-xs tracking-widest uppercase mb-3 flex items-center gap-2">
-                    <span className="text-lg">☯</span> {t.thesisHeader}
+                 <h3 className="text-gemini-gold font-mono text-[10px] sm:text-xs tracking-widest uppercase mb-2 sm:mb-3 flex items-center gap-2">
+                    <span className="text-base sm:text-lg">☯</span> {t.thesisHeader}
                  </h3>
-                 <p className="text-lg md:text-xl leading-relaxed font-light text-slate-200">
+                 <p className="text-sm sm:text-lg md:text-xl leading-relaxed font-light text-slate-200">
                    "{report.mainThesis}"
                  </p>
                  <CopyButton text={report.mainThesis} />
@@ -381,7 +382,7 @@ const App: React.FC = () => {
           <button
             onClick={handleShare}
             disabled={isCapturing}
-            className="fixed bottom-8 right-8 bg-gemini-accent hover:bg-sky-400 text-gemini-dark p-4 rounded-full shadow-xl shadow-sky-900/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 z-30 flex items-center justify-center"
+            className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 bg-gemini-accent hover:bg-sky-400 text-gemini-dark p-3 sm:p-4 rounded-full shadow-xl shadow-sky-900/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 z-30 flex items-center justify-center"
             title={language === 'en' ? "Share Report" : "分享报告"}
           >
             {isCapturing ? (

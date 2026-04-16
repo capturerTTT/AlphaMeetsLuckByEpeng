@@ -13,27 +13,31 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ language, setLanguage, onOpenHistory, model, setModel }) => {
   return (
-    <header className="py-6 px-4 md:px-8 border-b border-slate-800 bg-gemini-dark sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-lg relative overflow-hidden group">
-            <BrainCircuit className="w-6 h-6 text-white relative z-10" />
-            <div className="absolute inset-0 bg-yellow-400/20 blur-sm group-hover:animate-pulse"></div>
+    <header className="py-3 sm:py-6 px-3 sm:px-8 border-b border-slate-800 bg-gemini-dark sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
+      <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
+        {/* Logo — shrink on mobile */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-1.5 sm:p-2 rounded-lg relative overflow-hidden group">
+            <BrainCircuit className="w-5 h-5 sm:w-6 sm:h-6 text-white relative z-10" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">AlphaMeetsLuck <span className="text-gemini-gold text-xs align-top font-mono">ALPHA</span></h1>
-            <p className="text-xs text-slate-400 hidden sm:block">
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-xl font-bold tracking-tight text-white truncate">
+              AlphaMeetsLuck <span className="text-gemini-gold text-[10px] sm:text-xs align-top font-mono">ALPHA</span>
+            </h1>
+            <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">
               {language === 'en' ? 'Hedge Fund Fengshui Analyst' : '风水驱动对冲基金分析师'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Controls — compact on mobile */}
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           <button
             onClick={onOpenHistory}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
             title="History"
           >
-            <History className="w-5 h-5" />
+            <History className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           {/* Model Selector */}
@@ -42,12 +46,12 @@ const Header: React.FC<HeaderProps> = ({ language, setLanguage, onOpenHistory, m
           {/* Language Toggle */}
           <button
             onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-slate-300 transition-all"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] sm:text-xs font-mono text-slate-300 transition-all"
           >
-            <Globe className="w-3 h-3" />
+            <Globe className="w-3 h-3 hidden sm:block" />
             <span className={language === 'en' ? 'text-white font-bold' : 'text-slate-500'}>EN</span>
             <span className="text-slate-600">|</span>
-            <span className={language === 'zh' ? 'text-white font-bold' : 'text-slate-500'}>中文</span>
+            <span className={language === 'zh' ? 'text-white font-bold' : 'text-slate-500'}>中</span>
           </button>
         </div>
       </div>
