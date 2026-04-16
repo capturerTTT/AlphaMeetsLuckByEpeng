@@ -118,8 +118,8 @@ Schema:
 `;
 
 // ─── Kimi config ─────────────────────────────────────────────────────────────
-const KIMI_MODEL = 'kimi-k2.5';
-const KIMI_API_URL = 'https://api.moonshot.ai/v1/chat/completions';
+const KIMI_MODEL = 'moonshot-v1-128k';
+const KIMI_API_URL = 'https://api.moonshot.cn/v1/chat/completions';
 
 const KIMI_SYSTEM_EN = `
 You are "StockKimi", a savage Wall Street analyst who talks like a stand-up comedian.
