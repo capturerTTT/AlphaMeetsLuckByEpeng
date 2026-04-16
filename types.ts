@@ -6,7 +6,7 @@ export enum DecisionType {
 
 export type Language = 'en' | 'zh';
 
-export type ModelProvider = 'gemini' | 'claude';
+export type ModelProvider = 'gemini' | 'claude' | 'kimi';
 
 export interface StockData {
   symbol: string;

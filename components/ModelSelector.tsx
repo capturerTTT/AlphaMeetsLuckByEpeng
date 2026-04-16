@@ -38,6 +38,16 @@ const models: {
     badge: 'DEEP',
     badgeColor: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
   },
+  {
+    id: 'kimi',
+    label: 'Kimi',
+    labelZh: 'Kimi',
+    sublabel: 'Moonshot K2.5, 256K context',
+    sublabelZh: '月之暗面 K2.5，25万字上下文',
+    icon: <Zap className="w-4 h-4 text-cyan-400" />,
+    badge: 'K2.5',
+    badgeColor: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
+  },
 ];
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ model, setModel, language }) => {
@@ -114,8 +124,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ model, setModel, language
           <div className="px-4 py-2 border-t border-slate-800 bg-slate-900/50">
             <p className="text-[10px] text-slate-600 leading-relaxed">
               {isChinese
-                ? 'Claude 无实时搜索，数据基于训练截止日期。需设置 ANTHROPIC_API_KEY。'
-                : 'Claude lacks live search. Data is from training cutoff. Requires ANTHROPIC_API_KEY.'}
+                ? 'Claude / Kimi 无实时搜索，数据基于训练数据。需分别配置对应 API KEY。'
+                : 'Claude/Kimi lack live search. Data from training. Require respective API keys.'}
             </p>
           </div>
         </div>

@@ -117,6 +117,61 @@ Schema:
 }
 `;
 
+// ─── Kimi config ─────────────────────────────────────────────────────────────
+const KIMI_MODEL = 'kimi-k2.5';
+const KIMI_API_URL = 'https://api.moonshot.ai/v1/chat/completions';
+
+const KIMI_SYSTEM_EN = `
+You are "StockKimi", a savage Wall Street analyst who talks like a stand-up comedian.
+Style: BRUTAL sarcasm, dark humor, pop culture burns, merciless honesty.
+You mock overvalued garbage, clown on delusional bulls, deliver analysis like a comedy roast.
+
+Your analysis is still razor-sharp — just wrapped in jokes.
+- Summaries = comedy roast material (factually accurate)
+- keyPoints = sarcastic one-liners that hit hard
+- mainThesis = a killer punchline that's also genuinely insightful
+- Note: You don't have live data — be upfront about it in a funny way
+
+3 Dimensions: Fundamental / Momentum / Sentiment
+Decision: AGGRESSIVE / NEUTRAL / DEFENSIVE
+RESPOND ONLY WITH VALID JSON — no markdown fences, no explanation.
+Schema:
+{
+  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "⚠️ Training data, not live" },
+  "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
+  "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
+  "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
+  "decision": "AGGRESSIVE|NEUTRAL|DEFENSIVE",
+  "mainThesis": ""
+}
+`;
+
+const KIMI_SYSTEM_ZH = `
+你是 "毒舌Kimi"，金融圈最毒舌的AI分析师，月之暗面出品。
+你说话风格：阴阳怪气、毒舌到飞起、满嘴网络热梗，但每句吐槽背后都是硬核分析。
+你像李诞+巴菲特的合体——一边损你一边教你做人。
+对韭菜行为疯狂吐槽，对画饼公司冷嘲热讽，对好公司也要阴阳夸一波。
+
+规则：
+- summary 写成吐槽段子，别写成研报
+- keyPoints 要像弹幕金句——短、准、毒
+- mainThesis 要是一句让人拍大腿的毒舌金句
+- 注意：你没有实时数据，用搞笑的方式提醒用户这一点
+
+3个维度：基本面 / 市场动能 / 博弈情绪。所有文本使用【简体中文】。
+决策：AGGRESSIVE（梭哈）/ NEUTRAL（观望）/ DEFENSIVE（快跑）
+仅返回有效 JSON，不含任何 markdown 或说明文字。
+Schema:
+{
+  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "⚠️ 基于训练数据，非实时" },
+  "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
+  "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
+  "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
+  "decision": "AGGRESSIVE|NEUTRAL|DEFENSIVE",
+  "mainThesis": ""
+}
+`;
+
 // ─── Gemini response schema ───────────────────────────────────────────────────
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -325,6 +380,46 @@ async function analyzeWithGemini(query: string, language: string) {
   throw lastError;
 }
 
+// ─── Kimi analysis ───────────────────────────────────────────────────────────
+async function analyzeWithKimi(query: string, language: string) {
+  const apiKey = process.env.KIMI_API_KEY;
+  if (!apiKey) throw new Error("KIMI_API_KEY is not configured on the server.");
+
+  const isChinese = language === 'zh';
+  const prompt = isChinese
+    ? `请对以下股票/公司进行深度分析："${query}"。`
+    : `Perform a deep-dive analysis on: "${query}".`;
+
+  const response = await fetch(KIMI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: KIMI_MODEL,
+      messages: [
+        { role: 'system', content: isChinese ? KIMI_SYSTEM_ZH : KIMI_SYSTEM_EN },
+        { role: 'user',   content: prompt },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Kimi API error ${response.status}: ${err}`);
+  }
+
+  const raw = await response.json();
+  let jsonText: string = raw?.choices?.[0]?.message?.content ?? '';
+  jsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("No JSON found in Kimi response");
+  const data = JSON.parse(jsonMatch[0]);
+  return { ...data, sources: [] };
+}
+
 // ─── Fortune / BaZi reading ──────────────────────────────────────────────────
 async function analyzeCompatibility(
   query: string,
@@ -481,6 +576,8 @@ export default async function handler(req: any, res: any) {
       const [stockResult, fortuneResult] = await Promise.allSettled([
         model === 'claude'
           ? analyzeWithClaude(query.trim(), language)
+          : model === 'kimi'
+          ? analyzeWithKimi(query.trim(), language)
           : analyzeWithGemini(query.trim(), language),
         // Fortune reading uses a placeholder thesis since we don't have the stock result yet.
         // We pass the raw query — the fortune AI will determine stock element from the name.
@@ -517,6 +614,8 @@ export default async function handler(req: any, res: any) {
     // No BaZi — just stock analysis
     const result = model === 'claude'
       ? await analyzeWithClaude(query.trim(), language)
+      : model === 'kimi'
+      ? await analyzeWithKimi(query.trim(), language)
       : await analyzeWithGemini(query.trim(), language);
 
     return res.status(200).json(result);

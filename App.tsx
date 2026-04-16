@@ -348,9 +348,11 @@ const App: React.FC = () => {
                    <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${
                      model === 'claude'
                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                       : model === 'kimi'
+                       ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
                        : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                    }`}>
-                     {model === 'claude' ? '⚡ Claude' : '🔍 Gemini + Google Search'}
+                     {model === 'claude' ? '⚡ Claude' : model === 'kimi' ? '🌙 Kimi K2.5' : '🔍 Gemini + Google Search'}
                    </span>
                  </div>
                  <div className="flex flex-wrap gap-3">
