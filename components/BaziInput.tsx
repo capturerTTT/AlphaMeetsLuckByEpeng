@@ -24,12 +24,14 @@ const HOUR_NAMES_ZH = [
 ];
 
 const BaziInput: React.FC<BaziInputProps> = ({ baziInfo, onBaziChange, language }) => {
-  const [expanded, setExpanded] = useState(false);
-  const [year,     setYear]     = useState(1990);
-  const [month,    setMonth]    = useState(6);
-  const [day,      setDay]      = useState(15);
-  const [hour,     setHour]     = useState<number | undefined>(undefined);
-  const [location, setLocation] = useState('');
+  // Default expanded when no baziInfo is set (first-time user)
+  const [expanded, setExpanded] = useState(!baziInfo);
+  // Initialize form fields from saved baziInfo if available
+  const [year,     setYear]     = useState(baziInfo?.birthYear ?? 1990);
+  const [month,    setMonth]    = useState(baziInfo?.birthMonth ?? 6);
+  const [day,      setDay]      = useState(baziInfo?.birthDay ?? 15);
+  const [hour,     setHour]     = useState<number | undefined>(baziInfo?.birthHour);
+  const [location, setLocation] = useState(baziInfo?.birthLocation ?? '');
 
   const isCN = language === 'zh';
 
@@ -60,8 +62,8 @@ const BaziInput: React.FC<BaziInputProps> = ({ baziInfo, onBaziChange, language 
           <Sparkles className="w-4 h-4 flex-shrink-0" />
           <span className="truncate">
             {baziInfo
-              ? (isCN ? `已设定 — ${baziInfo.birthYear}/${baziInfo.birthMonth}/${baziInfo.birthDay} · ${baziInfo.birthLocation}` : `Set — ${baziInfo.birthYear}/${baziInfo.birthMonth}/${baziInfo.birthDay} · ${baziInfo.birthLocation}`)
-              : (isCN ? '输入八字，测算命理缘分' : 'Add birth info for destiny match')
+              ? (isCN ? `已保存 — ${baziInfo.birthYear}/${baziInfo.birthMonth}/${baziInfo.birthDay} · ${baziInfo.birthLocation}（点击修改）` : `Saved — ${baziInfo.birthYear}/${baziInfo.birthMonth}/${baziInfo.birthDay} · ${baziInfo.birthLocation} (tap to edit)`)
+              : (isCN ? '第一步：输入你的生辰信息' : 'Step 1: Enter your birth info')
             }
           </span>
         </span>

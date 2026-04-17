@@ -22,7 +22,12 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [baziInfo, setBaziInfo] = useState<BaziInfo | null>(null);
+  const [baziInfo, setBaziInfo] = useState<BaziInfo | null>(() => {
+    try {
+      const saved = localStorage.getItem('baziInfo');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
 
   // History State
   const [history, setHistory] = useState<InvestmentReport[]>(() => {
@@ -38,6 +43,15 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('stockGeminiHistory', JSON.stringify(history));
   }, [history]);
+
+  // Persist baziInfo to localStorage
+  useEffect(() => {
+    if (baziInfo) {
+      localStorage.setItem('baziInfo', JSON.stringify(baziInfo));
+    } else {
+      localStorage.removeItem('baziInfo');
+    }
+  }, [baziInfo]);
 
   const addToHistory = (newReport: InvestmentReport) => {
     setHistory(prev => {
@@ -204,13 +218,22 @@ const App: React.FC = () => {
 
         <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-4 sm:py-8 md:py-12 pb-24">
 
-          {/* Search Section */}
+          {/* Step 1: BaZi Input — must fill first */}
+          <section className="mb-4 sm:mb-6 max-w-2xl mx-auto">
+            <BaziInput
+              baziInfo={baziInfo}
+              onBaziChange={setBaziInfo}
+              language={language}
+            />
+          </section>
+
+          {/* Step 2: Stock Search — only enabled after bazi is set */}
           <section className="mb-6 sm:mb-8 max-w-2xl mx-auto text-center">
             <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 text-white">
               {t.titlePrefix}<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{t.alpha}</span>{t.titleSuffix}
             </h2>
 
-            <form onSubmit={handleSearch} className="relative group mb-3 sm:mb-4">
+            <form onSubmit={handleSearch} className={`relative group mb-3 sm:mb-4 transition-all ${!baziInfo ? 'opacity-40 pointer-events-none' : ''}`}>
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
                 <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 group-focus-within:text-gemini-accent transition-colors" />
               </div>
@@ -218,12 +241,13 @@ const App: React.FC = () => {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={t.placeholder}
-                className="w-full pl-10 sm:pl-12 pr-14 sm:pr-4 py-3 sm:py-4 bg-slate-800/50 border border-slate-700 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-gemini-accent focus:border-transparent outline-none text-base sm:text-lg text-white placeholder-slate-500 transition-all shadow-lg backdrop-blur-sm"
+                disabled={!baziInfo}
+                placeholder={baziInfo ? t.placeholder : (language === 'en' ? 'Fill in your birth info first...' : '请先填写你的生辰信息...')}
+                className="w-full pl-10 sm:pl-12 pr-14 sm:pr-4 py-3 sm:py-4 bg-slate-800/50 border border-slate-700 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-gemini-accent focus:border-transparent outline-none text-base sm:text-lg text-white placeholder-slate-500 transition-all shadow-lg backdrop-blur-sm disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
-                disabled={loading || !query.trim()}
+                disabled={loading || !query.trim() || !baziInfo}
                 className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-6 rounded-lg sm:rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/20"
               >
                 {loading ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : (
@@ -235,13 +259,6 @@ const App: React.FC = () => {
             </form>
 
             <p className="mb-4 sm:mb-5 text-xs sm:text-sm text-slate-500">{t.supportText}</p>
-
-            {/* BaZi Input — collapsible fortune toggle */}
-            <BaziInput
-              baziInfo={baziInfo}
-              onBaziChange={setBaziInfo}
-              language={language}
-            />
           </section>
 
           {/* Error State */}
