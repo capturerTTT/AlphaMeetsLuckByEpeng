@@ -34,6 +34,7 @@ export function encodeShareData(report: FullReport): string {
 
   const slim: any = {
     y: report.stockData.symbol,
+    n: trunc(report.stockData.name, 30),
     p: report.stockData.price,
     g: report.stockData.changePercent,
     r: report.stockData.peRatio || '',
@@ -89,7 +90,7 @@ export function decodeShareData(encoded: string): FullReport | null {
 
     const report: FullReport = {
       stockData: {
-        symbol: slim.y || '?', price: slim.p || '?', changePercent: slim.g || '?',
+        symbol: slim.y || '?', name: slim.n || '', price: slim.p || '?', changePercent: slim.g || '?',
         peRatio: slim.r || '-', marketCap: slim.k || '-', lastUpdated: slim.u || '',
       },
       fundamental: decodeDim(slim.f),
@@ -140,7 +141,7 @@ export function getShareDataFromURL(): FullReport | null {
 
 export async function generateQRDataURL(url: string, size = 200): Promise<string> {
   try {
-    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=${size}x${size}&bgcolor=0f172a&color=ffffff&format=png&ecc=L`;
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=${size}x${size}&bgcolor=ffffff&color=000000&format=png&ecc=M`;
     const response = await fetch(apiUrl);
     if (!response.ok) throw new Error(`QR API ${response.status}`);
     const blob = await response.blob();

@@ -10,6 +10,7 @@ export type ModelProvider = 'gemini' | 'kimi';
 
 export interface StockData {
   symbol: string;
+  name?: string;
   price: string;
   changePercent: string;
   peRatio: string;

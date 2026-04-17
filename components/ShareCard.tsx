@@ -14,8 +14,8 @@ interface ShareCardProps {
  */
 const ShareCard: React.FC<ShareCardProps> = ({ report, qrDataURL, stockName }) => {
   const symbol = report.stockData.symbol;
-  // Use the readable name for the title, show symbol as subtitle
-  const displayName = stockName || symbol;
+  // Prefer AI-returned company name, fall back to user's search query
+  const displayName = report.stockData.name || stockName || symbol;
   const decision = report.decision;
 
   const decisionLabel =
@@ -139,6 +139,7 @@ const ShareCard: React.FC<ShareCardProps> = ({ report, qrDataURL, stockName }) =
         <div style={{
           width: 100, height: 100, borderRadius: 8, overflow: 'hidden',
           border: '2px solid rgba(129,140,248,0.3)', flexShrink: 0,
+          background: '#ffffff',
         }}>
           <img
             src={qrDataURL}

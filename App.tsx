@@ -174,7 +174,8 @@ const MainApp: React.FC = () => {
         const link = document.createElement('a');
         const date = new Date().toISOString().split('T')[0];
         link.href = image;
-        link.download = `我和${report.stockData.symbol}谈恋爱了_${date}.png`;
+        const stockDisplayName = report.stockData.name || query;
+        link.download = `我和${stockDisplayName}谈恋爱了_${date}.png`;
         link.click();
       }
     } catch (e) {

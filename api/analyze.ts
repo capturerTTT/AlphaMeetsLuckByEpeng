@@ -34,7 +34,7 @@ Decision: AGGRESSIVE (Pursue!) / NEUTRAL (Just Friends) / DEFENSIVE (Run Away!)
 
 CRITICAL: Respond with ONLY a valid JSON object — no explanation, no markdown fences.
 Schema:
-{"stockData":{"symbol":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["",""]},"decision":"NEUTRAL","mainThesis":""}
+{"stockData":{"symbol":"","name":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["",""]},"decision":"NEUTRAL","mainThesis":""}
 `;
 
 const GEMINI_SYSTEM_ZH = `
@@ -53,7 +53,7 @@ const GEMINI_SYSTEM_ZH = `
 
 关键要求：只返回有效的 JSON 对象，不含任何 markdown 或说明文字。
 格式：
-{"stockData":{"symbol":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["",""]},"decision":"NEUTRAL","mainThesis":""}
+{"stockData":{"symbol":"","name":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["",""]},"decision":"NEUTRAL","mainThesis":""}
 `;
 
 // ─── Kimi config ─────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ Decision: AGGRESSIVE (Pursue!) / NEUTRAL (Just Friends) / DEFENSIVE (Run Away!)
 RESPOND ONLY WITH VALID JSON — no markdown, no explanation.
 Schema:
 {
-  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "" },
+  "stockData": { "symbol": "", "name": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "" },
   "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["",""] },
   "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["",""] },
   "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["",""] },
@@ -100,7 +100,7 @@ const KIMI_SYSTEM_ZH = `
 仅返回有效 JSON，不含任何 markdown 或说明文字。
 Schema:
 {
-  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "" },
+  "stockData": { "symbol": "", "name": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "" },
   "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["",""] },
   "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["",""] },
   "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["",""] },
@@ -117,13 +117,14 @@ const RESPONSE_SCHEMA = {
       type: Type.OBJECT,
       properties: {
         symbol:        { type: Type.STRING },
+        name:          { type: Type.STRING },
         price:         { type: Type.STRING },
         changePercent: { type: Type.STRING },
         peRatio:       { type: Type.STRING },
         marketCap:     { type: Type.STRING },
         lastUpdated:   { type: Type.STRING },
       },
-      required: ["symbol", "price", "changePercent"],
+      required: ["symbol", "name", "price", "changePercent"],
     },
     fundamental: {
       type: Type.OBJECT,
