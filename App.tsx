@@ -7,12 +7,24 @@ import HistorySidebar from './components/HistorySidebar';
 import CopyButton from './components/CopyButton';
 import BaziInput from './components/BaziInput';
 import CompatibilityPanel from './components/CompatibilityPanel';
+import ShareCard from './components/ShareCard';
+import SharedView from './components/SharedView';
 import { analyzeStock, FullReport } from './services/apiService';
 import { InvestmentReport, Language, ModelProvider, BaziInfo } from './types';
 import { calculatePillars } from './utils/bazi';
+import { getShareDataFromURL, buildShareURL, generateQRDataURL } from './utils/shareUtils';
 import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Share2, BrainCircuit, Sparkles } from 'lucide-react';
 
+// Wrapper: check for share link before rendering the main app
 const App: React.FC = () => {
+  const sharedReport = getShareDataFromURL();
+  if (sharedReport) {
+    return <SharedView report={sharedReport} />;
+  }
+  return <MainApp />;
+};
+
+const MainApp: React.FC = () => {
   const [query, setQuery] = useState('');
   const [language, setLanguage] = useState<Language>('zh');
   const [model, setModel] = useState<ModelProvider>('gemini');
@@ -22,6 +34,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [qrDataURL, setQrDataURL] = useState<string>('');
   const [baziInfo, setBaziInfo] = useState<BaziInfo | null>(() => {
     try {
       const saved = localStorage.getItem('baziInfo');
@@ -137,27 +150,38 @@ const App: React.FC = () => {
   const handleShare = async () => {
     if (!report) return;
     setIsCapturing(true);
-    const element = document.getElementById('report-capture-area');
-    if (element) {
-      try {
-        const canvas = await html2canvas(element, {
+
+    try {
+      // 1. Build share URL and generate QR code
+      const shareURL = buildShareURL(report);
+      const qr = await generateQRDataURL(shareURL, 200);
+      setQrDataURL(qr);
+
+      // 2. Wait a frame for the ShareCard to render with the QR
+      await new Promise(r => setTimeout(r, 300));
+
+      // 3. Capture the ShareCard element
+      const shareCard = document.getElementById('share-card');
+      if (shareCard) {
+        const canvas = await html2canvas(shareCard, {
           backgroundColor: '#0f172a',
           scale: 2,
           useCORS: true,
-          logging: false
+          logging: false,
+          width: 600,
         });
         const image = canvas.toDataURL('image/png');
         const link = document.createElement('a');
         const date = new Date().toISOString().split('T')[0];
-        const stockName = report.stockData.symbol;
         link.href = image;
-        link.download = `《${stockName}》的《${date}》运势.png`;
+        link.download = `我和${report.stockData.symbol}谈恋爱了_${date}.png`;
         link.click();
-      } catch (e) {
-        console.error("Screenshot failed:", e);
       }
+    } catch (e) {
+      console.error("Share image generation failed:", e);
+    } finally {
+      setIsCapturing(false);
     }
-    setIsCapturing(false);
   };
 
   const isPositiveChange = report?.stockData.changePercent.startsWith('+') ||
@@ -393,6 +417,11 @@ const App: React.FC = () => {
             </div>
           )}
         </main>
+
+        {/* Hidden ShareCard — rendered off-screen for html2canvas capture */}
+        {report && qrDataURL && (
+          <ShareCard report={report} qrDataURL={qrDataURL} />
+        )}
 
         {/* Floating Share Button */}
         {report && (
