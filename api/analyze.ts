@@ -33,6 +33,7 @@ Rules:
 3 Dimensions: Fundamental / Momentum / Sentiment
 Decision: AGGRESSIVE (Swipe Right Hard!) / NEUTRAL (Just Friends) / DEFENSIVE (Block & Delete!)
 
+CRITICAL JSON RULE: NEVER use double-quote characters (") inside string values — they break JSON. Use single quotes or rephrase instead.
 CRITICAL: Respond with ONLY a valid JSON object — no explanation, no markdown fences.
 Schema:
 {"stockData":{"symbol":"","name":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["",""]},"decision":"NEUTRAL","mainThesis":""}
@@ -53,6 +54,7 @@ const GEMINI_SYSTEM_ZH = `
 3个维度：基本面 / 市场动能 / 博弈情绪。所有文本使用【简体中文】。
 决策：AGGRESSIVE（强力追求）/ NEUTRAL（认识就好）/ DEFENSIVE（逃吧不是你的宝贝）
 
+严禁在字符串值内部使用英文双引号(")——会导致JSON解析报错。引用词语请用「」，如「渣男」「老实人」。
 关键要求：只返回有效的 JSON 对象，不含任何 markdown 或说明文字。
 格式：
 {"stockData":{"symbol":"","name":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["",""]},"decision":"NEUTRAL","mainThesis":""}
@@ -76,6 +78,7 @@ Rules:
 
 3 Dimensions: Fundamental / Momentum / Sentiment
 Decision: AGGRESSIVE (Swipe Right Hard!) / NEUTRAL (Just Friends) / DEFENSIVE (Block & Delete!)
+CRITICAL JSON RULE: NEVER use double-quote characters (") inside string values — they break JSON. Use single quotes or rephrase instead.
 RESPOND ONLY WITH VALID JSON — no markdown, no explanation.
 Schema:
 {
@@ -102,6 +105,7 @@ const KIMI_SYSTEM_ZH = `
 
 3个维度：基本面 / 市场动能 / 博弈情绪。所有文本使用【简体中文】。
 决策：AGGRESSIVE（强力追求）/ NEUTRAL（认识就好）/ DEFENSIVE（逃吧不是你的宝贝）
+严禁在字符串值内部使用英文双引号(")——会导致JSON解析报错。引用词语请用「」，如「渣男」「老实人」。
 仅返回有效 JSON，不含任何 markdown 或说明文字。
 Schema:
 {
@@ -268,6 +272,43 @@ Return ONLY valid JSON (no markdown):
 // ─── Helper ───────────────────────────────────────────────────────────────────
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// Repair JSON that contains unescaped double-quotes inside string values.
+// Walks the string character by character; when inside a string, a " is only
+// treated as the closing delimiter if the next non-whitespace char is : , } ]
+function repairJSON(raw: string): string {
+  const out: string[] = [];
+  let inStr = false;
+  let i = 0;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (inStr && ch === '\\') {
+      out.push(ch, raw[i + 1] ?? '');
+      i += 2; continue;
+    }
+    if (ch === '"') {
+      if (!inStr) {
+        inStr = true; out.push(ch); i++; continue;
+      }
+      let j = i + 1;
+      while (j < raw.length && /[ \t\r\n]/.test(raw[j])) j++;
+      const next = raw[j] ?? '';
+      if (next === '' || next === ':' || next === ',' || next === '}' || next === ']') {
+        inStr = false; out.push(ch);
+      } else {
+        out.push('\\"');
+      }
+      i++; continue;
+    }
+    out.push(ch); i++;
+  }
+  return out.join('');
+}
+
+function parseJSON(text: string): any {
+  try { return JSON.parse(text); } catch { /* try repair */ }
+  return JSON.parse(repairJSON(text));
+}
+
 // ─── Gemini analysis ──────────────────────────────────────────────────────────
 async function analyzeWithGemini(query: string, language: string) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -308,7 +349,7 @@ async function analyzeWithGemini(query: string, language: string) {
       jsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
       const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found in Gemini response");
-      const data = JSON.parse(jsonMatch[0]);
+      const data = parseJSON(jsonMatch[0]);
 
       const groundingChunks = (response as any).candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
       const sources = groundingChunks
@@ -393,7 +434,7 @@ You MUST use live web search results, not just training data.`;
       jsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
       const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found in Kimi response");
-      const data = JSON.parse(jsonMatch[0]);
+      const data = parseJSON(jsonMatch[0]);
       return { ...data, sources: [] };
     }
     const err = await response.text();
@@ -405,7 +446,7 @@ You MUST use live web search results, not just training data.`;
   jsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("No JSON found in Kimi response");
-  const data = JSON.parse(jsonMatch[0]);
+  const data = parseJSON(jsonMatch[0]);
   return { ...data, sources: [] };
 }
 
@@ -495,7 +536,7 @@ Write in fortune-teller style with humor and some edge.`;
       let text = (response.text ?? '').replace(/```json\n?|\n?```/g, '').trim();
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error('No JSON in fortune response');
-      return JSON.parse(match[0]);
+      return parseJSON(match[0]);
     } catch (err: any) {
       lastErr = err;
       const msg = (err?.message ?? '').toString();
