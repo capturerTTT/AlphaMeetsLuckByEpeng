@@ -420,7 +420,7 @@ const MainApp: React.FC = () => {
 
         {/* Hidden ShareCard — rendered off-screen for html2canvas capture */}
         {report && qrDataURL && (
-          <ShareCard report={report} qrDataURL={qrDataURL} />
+          <ShareCard report={report} qrDataURL={qrDataURL} stockName={query} />
         )}
 
         {/* Floating Share Button */}

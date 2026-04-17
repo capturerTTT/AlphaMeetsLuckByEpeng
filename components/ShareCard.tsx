@@ -5,14 +5,17 @@ import { DecisionType } from '../types';
 interface ShareCardProps {
   report: FullReport;
   qrDataURL: string;
+  stockName: string; // user's original search query (readable name)
 }
 
 /**
  * A fixed-size card designed to be captured as a share image.
  * Rendered off-screen, then html2canvas captures it.
  */
-const ShareCard: React.FC<ShareCardProps> = ({ report, qrDataURL }) => {
+const ShareCard: React.FC<ShareCardProps> = ({ report, qrDataURL, stockName }) => {
   const symbol = report.stockData.symbol;
+  // Use the readable name for the title, show symbol as subtitle
+  const displayName = stockName || symbol;
   const decision = report.decision;
 
   const decisionLabel =
@@ -54,8 +57,11 @@ const ShareCard: React.FC<ShareCardProps> = ({ report, qrDataURL }) => {
       {/* Main Title */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <div style={{ fontSize: 32, fontWeight: 800, color: '#ffffff', marginBottom: 4 }}>
-          我和 <span style={{ color: '#818cf8' }}>{symbol}</span> 谈恋爱了！
+          我和 <span style={{ color: '#818cf8' }}>{displayName}</span> 谈恋爱了！
         </div>
+        {displayName !== symbol && (
+          <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 0 }}>{symbol}</div>
+        )}
         <div style={{ fontSize: 14, color: '#64748b' }}>
           找只股票谈恋爱 · AlphaMeetsLuck
         </div>
