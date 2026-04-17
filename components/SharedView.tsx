@@ -1,7 +1,9 @@
 import React from 'react';
 import { FullReport } from '../services/apiService';
-import { Language, DecisionType } from '../types';
+import { Language } from '../types';
+import MatrixCard from './MatrixCard';
 import DecisionBadge from './DecisionBadge';
+import CompatibilityPanel from './CompatibilityPanel';
 import { BrainCircuit, Heart } from 'lucide-react';
 
 interface SharedViewProps {
@@ -9,24 +11,26 @@ interface SharedViewProps {
 }
 
 /**
- * Read-only view of a shared report.
- * Shown when someone opens a share link (scans the QR code).
+ * Full read-only view of a shared report.
+ * Shows the complete analysis but hides the sharer's private birth info.
  */
 const SharedView: React.FC<SharedViewProps> = ({ report }) => {
-  const language: Language = 'zh'; // Shared view defaults to Chinese
+  const language: Language = 'zh';
 
   const isPositiveChange = report.stockData.changePercent.startsWith('+') ||
     !report.stockData.changePercent.startsWith('-');
 
   const handleCTA = () => {
-    // Clear the hash and go to the main page
+    // Clear the sharer's bazi from localStorage so the new user starts fresh
+    localStorage.removeItem('baziInfo');
+    // Navigate to clean main page (no hash)
     window.location.href = window.location.origin;
   };
 
   return (
     <div className="min-h-screen bg-gemini-dark text-slate-200 font-sans overflow-x-hidden">
 
-      {/* Simple Header */}
+      {/* Header */}
       <header className="py-4 px-4 sm:px-8 border-b border-slate-800 bg-gemini-dark/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -61,7 +65,7 @@ const SharedView: React.FC<SharedViewProps> = ({ report }) => {
 
         <div className="space-y-4 sm:space-y-8">
 
-          {/* Stock Data + Decision */}
+          {/* 1. Stock Data + Decision */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
             <div className="lg:col-span-3 bg-gemini-card border border-slate-700 rounded-xl p-4 sm:p-6 flex flex-col gap-4 shadow-2xl">
               <h2 className="text-2xl sm:text-3xl font-bold text-white">{report.stockData.symbol}</h2>
@@ -92,7 +96,7 @@ const SharedView: React.FC<SharedViewProps> = ({ report }) => {
             </div>
           </div>
 
-          {/* Thesis */}
+          {/* 2. Thesis */}
           <div className="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-xl p-4 sm:p-6 md:p-8 relative overflow-hidden shadow-lg">
             <div className="absolute top-0 left-0 w-1 h-full bg-gemini-gold"></div>
             <h3 className="text-gemini-gold font-mono text-[10px] sm:text-xs tracking-widest uppercase mb-2 sm:mb-3 flex items-center gap-2">
@@ -103,56 +107,20 @@ const SharedView: React.FC<SharedViewProps> = ({ report }) => {
             </p>
           </div>
 
-          {/* Compact 3D Scores */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {[
-              { label: '基本面', data: report.fundamental },
-              { label: '市场动能', data: report.momentum },
-              { label: '博弈情绪', data: report.sentiment },
-            ].map(({ label, data }) => {
-              const color = data.score >= 70 ? 'text-green-400 border-green-500/40' : data.score >= 40 ? 'text-yellow-400 border-yellow-500/40' : 'text-red-400 border-red-500/40';
-              return (
-                <div key={label} className={`bg-gemini-card border rounded-xl p-3 sm:p-5 text-center ${color.split(' ')[1]}`}>
-                  <div className="text-[10px] sm:text-xs text-slate-500 font-mono mb-1">{label}</div>
-                  <div className={`text-2xl sm:text-3xl font-mono font-bold ${color.split(' ')[0]}`}>{data.score}</div>
-                  <div className="text-[10px] sm:text-xs text-slate-400 mt-1 truncate">{data.title}</div>
-                </div>
-              );
-            })}
+          {/* 3. Full 3D Matrix Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <MatrixCard type="Fundamental" data={report.fundamental} language={language} />
+            <MatrixCard type="Momentum" data={report.momentum} language={language} />
+            <MatrixCard type="Sentiment" data={report.sentiment} language={language} />
           </div>
 
-          {/* Compact Compatibility Verdict */}
-          {report.compatibility?.stockElement && (
-            <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/20 rounded-xl p-4 sm:p-6 text-center space-y-3">
-              <p className="text-[10px] sm:text-xs font-mono text-amber-500/60 tracking-widest uppercase">☯ 命理匹配</p>
-              <div className="flex items-center justify-center gap-4">
-                <span className="text-3xl">{report.compatibility.stockElement === '金' ? '🪙' : report.compatibility.stockElement === '木' ? '🌿' : report.compatibility.stockElement === '水' ? '💧' : report.compatibility.stockElement === '火' ? '🔥' : '🌍'}</span>
-                <div>
-                  <div className="text-xl sm:text-2xl font-bold text-amber-300">{report.compatibility.verdict}</div>
-                  <div className="text-sm text-slate-400">匹配度 {report.compatibility.overallScore}/100</div>
-                </div>
-              </div>
-              {report.compatibility.verdictDetail && (
-                <p className="text-xs sm:text-sm text-slate-300 italic">「{report.compatibility.verdictDetail}」</p>
-              )}
-              {report.compatibility.pillars?.yearPillar && (
-                <div className="flex justify-center gap-3 mt-2">
-                  {['年', '月', '日', '时'].map((lbl, i) => {
-                    const vals = [report.compatibility!.pillars?.yearPillar, report.compatibility!.pillars?.monthPillar, report.compatibility!.pillars?.dayPillar, report.compatibility!.pillars?.hourPillar];
-                    return (
-                      <div key={lbl} className="text-center">
-                        <div className="text-[10px] text-slate-500">{lbl}柱</div>
-                        <div className="text-amber-300 font-bold text-sm bg-slate-800 border border-amber-500/20 rounded px-2 py-1">{vals[i]}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+          {/* 4. Full Compatibility Panel — with privacy: hides pillars, user element */}
+          {report.compatibility && report.compatibility.stockElement && (
+            <CompatibilityPanel reading={report.compatibility} language={language} hidePrivateInfo={true} />
           )}
         </div>
 
-        {/* Big CTA at bottom */}
+        {/* Big CTA */}
         <div className="mt-10 sm:mt-16 text-center">
           <div className="inline-block bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-10 max-w-md mx-auto">
             <p className="text-3xl sm:text-4xl mb-3">💘</p>

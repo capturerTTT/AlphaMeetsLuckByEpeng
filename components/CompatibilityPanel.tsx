@@ -4,6 +4,7 @@ import { FortuneReading, Language } from '../types';
 interface CompatibilityPanelProps {
   reading: FortuneReading;
   language: Language;
+  hidePrivateInfo?: boolean; // hide pillars, user element, lucky elements (for shared view)
 }
 
 const ELEMENT_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -88,7 +89,7 @@ function TimeframeCard({ title, timeframe }: { title: string; timeframe: { score
   );
 }
 
-const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, language }) => {
+const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, language, hidePrivateInfo = false }) => {
   const isCN = language === 'zh';
 
   if (!reading || !reading.stockElement) return null;
@@ -123,19 +124,21 @@ const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, langua
         </h3>
       </div>
 
-      {/* Four Pillars — 4 cols always, smaller on mobile */}
-      <div>
-        <p className="text-[10px] sm:text-xs text-slate-500 font-mono mb-2 sm:mb-3">{pillarsLabel}</p>
-        <div className="grid grid-cols-4 gap-2 sm:gap-4">
-          <PillarBox label={isCN ? '年柱' : 'Year'} value={pillars.yearPillar} />
-          <PillarBox label={isCN ? '月柱' : 'Month'} value={pillars.monthPillar} />
-          <PillarBox label={isCN ? '日柱' : 'Day'}   value={pillars.dayPillar} />
-          <PillarBox label={isCN ? '时柱' : 'Hour'}  value={pillars.hourPillar} />
+      {/* Four Pillars — hidden in shared view for privacy */}
+      {!hidePrivateInfo && (
+        <div>
+          <p className="text-[10px] sm:text-xs text-slate-500 font-mono mb-2 sm:mb-3">{pillarsLabel}</p>
+          <div className="grid grid-cols-4 gap-2 sm:gap-4">
+            <PillarBox label={isCN ? '年柱' : 'Year'} value={pillars.yearPillar} />
+            <PillarBox label={isCN ? '月柱' : 'Month'} value={pillars.monthPillar} />
+            <PillarBox label={isCN ? '日柱' : 'Day'}   value={pillars.dayPillar} />
+            <PillarBox label={isCN ? '时柱' : 'Hour'}  value={pillars.hourPillar} />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Elements Row — stack on mobile */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      {/* Elements Row — stock element always visible, user element hidden in shared view */}
+      <div className={`grid grid-cols-1 ${hidePrivateInfo ? '' : 'sm:grid-cols-2'} gap-3 sm:gap-4`}>
         <div className={`flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border ${elemColors.bg} ${elemColors.border}`}>
           <span className="text-xl sm:text-2xl">{elemEmoji}</span>
           <div className="min-w-0">
@@ -147,14 +150,16 @@ const CompatibilityPanel: React.FC<CompatibilityPanelProps> = ({ reading, langua
           </div>
         </div>
 
-        <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border bg-purple-900/20 border-purple-500/30">
-          <span className="text-xl sm:text-2xl">🔮</span>
-          <div className="min-w-0">
-            <p className="text-[10px] sm:text-xs text-slate-500 font-mono">{userElemLabel}</p>
-            <p className="font-bold text-xs sm:text-sm text-purple-300">{reading.userDominantElement}</p>
-            <p className="text-[10px] sm:text-xs text-slate-500 truncate">{isCN ? `喜神：${(reading.luckyElements ?? []).join('、')}` : `Lucky: ${(reading.luckyElements ?? []).join(', ')}`}</p>
+        {!hidePrivateInfo && (
+          <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border bg-purple-900/20 border-purple-500/30">
+            <span className="text-xl sm:text-2xl">🔮</span>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-slate-500 font-mono">{userElemLabel}</p>
+              <p className="font-bold text-xs sm:text-sm text-purple-300">{reading.userDominantElement}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 truncate">{isCN ? `喜神：${(reading.luckyElements ?? []).join('、')}` : `Lucky: ${(reading.luckyElements ?? []).join(', ')}`}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Three Timeframes — single col on mobile */}
