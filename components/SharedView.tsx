@@ -1,9 +1,7 @@
 import React from 'react';
 import { FullReport } from '../services/apiService';
 import { Language, DecisionType } from '../types';
-import MatrixCard from './MatrixCard';
 import DecisionBadge from './DecisionBadge';
-import CompatibilityPanel from './CompatibilityPanel';
 import { BrainCircuit, Heart } from 'lucide-react';
 
 interface SharedViewProps {
@@ -105,16 +103,52 @@ const SharedView: React.FC<SharedViewProps> = ({ report }) => {
             </p>
           </div>
 
-          {/* 3D Matrix */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MatrixCard type="Fundamental" data={report.fundamental} language={language} />
-            <MatrixCard type="Momentum" data={report.momentum} language={language} />
-            <MatrixCard type="Sentiment" data={report.sentiment} language={language} />
+          {/* Compact 3D Scores */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            {[
+              { label: '基本面', data: report.fundamental },
+              { label: '市场动能', data: report.momentum },
+              { label: '博弈情绪', data: report.sentiment },
+            ].map(({ label, data }) => {
+              const color = data.score >= 70 ? 'text-green-400 border-green-500/40' : data.score >= 40 ? 'text-yellow-400 border-yellow-500/40' : 'text-red-400 border-red-500/40';
+              return (
+                <div key={label} className={`bg-gemini-card border rounded-xl p-3 sm:p-5 text-center ${color.split(' ')[1]}`}>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-mono mb-1">{label}</div>
+                  <div className={`text-2xl sm:text-3xl font-mono font-bold ${color.split(' ')[0]}`}>{data.score}</div>
+                  <div className="text-[10px] sm:text-xs text-slate-400 mt-1 truncate">{data.title}</div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Compatibility */}
-          {report.compatibility && report.compatibility.stockElement && (
-            <CompatibilityPanel reading={report.compatibility} language={language} />
+          {/* Compact Compatibility Verdict */}
+          {report.compatibility?.stockElement && (
+            <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/20 rounded-xl p-4 sm:p-6 text-center space-y-3">
+              <p className="text-[10px] sm:text-xs font-mono text-amber-500/60 tracking-widest uppercase">☯ 命理匹配</p>
+              <div className="flex items-center justify-center gap-4">
+                <span className="text-3xl">{report.compatibility.stockElement === '金' ? '🪙' : report.compatibility.stockElement === '木' ? '🌿' : report.compatibility.stockElement === '水' ? '💧' : report.compatibility.stockElement === '火' ? '🔥' : '🌍'}</span>
+                <div>
+                  <div className="text-xl sm:text-2xl font-bold text-amber-300">{report.compatibility.verdict}</div>
+                  <div className="text-sm text-slate-400">匹配度 {report.compatibility.overallScore}/100</div>
+                </div>
+              </div>
+              {report.compatibility.verdictDetail && (
+                <p className="text-xs sm:text-sm text-slate-300 italic">「{report.compatibility.verdictDetail}」</p>
+              )}
+              {report.compatibility.pillars?.yearPillar && (
+                <div className="flex justify-center gap-3 mt-2">
+                  {['年', '月', '日', '时'].map((lbl, i) => {
+                    const vals = [report.compatibility!.pillars?.yearPillar, report.compatibility!.pillars?.monthPillar, report.compatibility!.pillars?.dayPillar, report.compatibility!.pillars?.hourPillar];
+                    return (
+                      <div key={lbl} className="text-center">
+                        <div className="text-[10px] text-slate-500">{lbl}柱</div>
+                        <div className="text-amber-300 font-bold text-sm bg-slate-800 border border-amber-500/20 rounded px-2 py-1">{vals[i]}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
