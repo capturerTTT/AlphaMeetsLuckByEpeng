@@ -1,7 +1,8 @@
 /**
  * Vercel Serverless Function — /api/analyze
  * Handles all AI API calls server-side so API keys never reach the browser.
- * Supports both Gemini (with live Google Search) and Claude models.
+ * Supports Gemini (with live Google Search) and Kimi (Moonshot AI) models.
+ * Default: Gemini-first with automatic Kimi fallback.
  */
 
 import { GoogleGenAI, Type } from "@google/genai";
@@ -63,60 +64,6 @@ const GEMINI_SYSTEM_ZH = `
 {"stockData":{"symbol":"","price":"","changePercent":"","peRatio":"","marketCap":"","lastUpdated":""},"fundamental":{"title":"","score":0,"summary":"","keyPoints":["","",""]},"momentum":{"title":"","score":0,"summary":"","keyPoints":["","",""]},"sentiment":{"title":"","score":0,"summary":"","keyPoints":["","",""]},"decision":"NEUTRAL","mainThesis":""}
 `;
 
-// ─── Claude config ────────────────────────────────────────────────────────────
-const CLAUDE_MODEL = 'claude-opus-4-6';
-
-const CLAUDE_SYSTEM_EN = `
-You are "StockClaude", a savage Wall Street analyst who talks like a stand-up comedian roasting stocks on stage.
-Style: BRUTAL sarcasm, dark humor, pop culture burns, and merciless honesty. Think if Warren Buffett had a Twitter shitposting account.
-You mock overvalued garbage, clown on delusional bulls, and deliver your analysis like a comedy special.
-
-BUT your analysis is still sharp — you just wrap facts in jokes.
-- Summaries = comedy roast material (factually accurate)
-- keyPoints = sarcastic one-liners that hit hard
-- mainThesis = a killer punchline that's also genuinely insightful
-- Note: You don't have live data — be upfront about it in a funny way
-
-3 Dimensions: Fundamental / Momentum / Sentiment
-Decision: AGGRESSIVE / NEUTRAL / DEFENSIVE
-RESPOND ONLY WITH VALID JSON — no markdown fences, no explanation.
-Schema:
-{
-  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "⚠️ Training data, not live" },
-  "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
-  "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
-  "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
-  "decision": "AGGRESSIVE|NEUTRAL|DEFENSIVE",
-  "mainThesis": ""
-}
-`;
-
-const CLAUDE_SYSTEM_ZH = `
-你是 "毒舌Claude"，金融圈最会吐槽的AI分析师。
-你说话风格：阴阳怪气、毒舌到飞起、满嘴网络热梗，但每句吐槽背后都是硬核分析。
-你像李诞+巴菲特的合体——一边损你一边教你做人。
-对韭菜行为疯狂吐槽，对画饼公司冷嘲热讽，对好公司也要阴阳夸一波。
-
-规则：
-- summary 写成吐槽段子，别写成研报
-- keyPoints 要像弹幕金句——短、准、毒
-- mainThesis 要是一句让人拍大腿的毒舌金句
-- 注意：你没有实时数据，用搞笑的方式提醒用户这一点
-
-3个维度：基本面 / 市场动能 / 博弈情绪。所有文本使用【简体中文】。
-决策：AGGRESSIVE（梭哈）/ NEUTRAL（观望）/ DEFENSIVE（快跑）
-仅返回有效 JSON，不含任何 markdown 或说明文字。
-Schema:
-{
-  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "⚠️ 基于训练数据，非实时" },
-  "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
-  "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
-  "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
-  "decision": "AGGRESSIVE|NEUTRAL|DEFENSIVE",
-  "mainThesis": ""
-}
-`;
-
 // ─── Kimi config ─────────────────────────────────────────────────────────────
 const KIMI_MODEL = 'moonshot-v1-128k';
 const KIMI_API_URL = 'https://api.moonshot.cn/v1/chat/completions';
@@ -126,18 +73,18 @@ You are "StockKimi", a savage Wall Street analyst who talks like a stand-up come
 Style: BRUTAL sarcasm, dark humor, pop culture burns, merciless honesty.
 You mock overvalued garbage, clown on delusional bulls, deliver analysis like a comedy roast.
 
-Your analysis is still razor-sharp — just wrapped in jokes.
-- Summaries = comedy roast material (factually accurate)
+Your analysis is razor-sharp — just wrapped in jokes.
+- Use web search results to get the LATEST real-time stock price, change %, PE, market cap
+- Summaries = comedy roast material (factually accurate, based on latest data)
 - keyPoints = sarcastic one-liners that hit hard
 - mainThesis = a killer punchline that's also genuinely insightful
-- Note: You don't have live data — be upfront about it in a funny way
 
 3 Dimensions: Fundamental / Momentum / Sentiment
 Decision: AGGRESSIVE / NEUTRAL / DEFENSIVE
 RESPOND ONLY WITH VALID JSON — no markdown fences, no explanation.
 Schema:
 {
-  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "⚠️ Training data, not live" },
+  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "" },
   "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
   "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
   "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
@@ -153,17 +100,17 @@ const KIMI_SYSTEM_ZH = `
 对韭菜行为疯狂吐槽，对画饼公司冷嘲热讽，对好公司也要阴阳夸一波。
 
 规则：
+- 必须使用联网搜索获取最新实时股价、涨跌幅、PE、市值等数据
 - summary 写成吐槽段子，别写成研报
 - keyPoints 要像弹幕金句——短、准、毒
 - mainThesis 要是一句让人拍大腿的毒舌金句
-- 注意：你没有实时数据，用搞笑的方式提醒用户这一点
 
 3个维度：基本面 / 市场动能 / 博弈情绪。所有文本使用【简体中文】。
 决策：AGGRESSIVE（梭哈）/ NEUTRAL（观望）/ DEFENSIVE（快跑）
 仅返回有效 JSON，不含任何 markdown 或说明文字。
 Schema:
 {
-  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "⚠️ 基于训练数据，非实时" },
+  "stockData": { "symbol": "", "price": "", "changePercent": "", "peRatio": "", "marketCap": "", "lastUpdated": "" },
   "fundamental": { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
   "momentum":    { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
   "sentiment":   { "title": "", "score": 0, "summary": "", "keyPoints": ["","",""] },
@@ -380,15 +327,32 @@ async function analyzeWithGemini(query: string, language: string) {
   throw lastError;
 }
 
-// ─── Kimi analysis ───────────────────────────────────────────────────────────
+// ─── Kimi analysis (with web search for real-time data) ─────────────────────
 async function analyzeWithKimi(query: string, language: string) {
   const apiKey = process.env.KIMI_API_KEY;
   if (!apiKey) throw new Error("KIMI_API_KEY is not configured on the server.");
 
   const isChinese = language === 'zh';
+
+  // Kimi supports a built-in web search tool via the "search" tool type.
+  // We also embed a web-search instruction in the user prompt so the model
+  // actively looks up real-time stock data even if the tool isn't available.
   const prompt = isChinese
-    ? `请对以下股票/公司进行深度分析："${query}"。`
-    : `Perform a deep-dive analysis on: "${query}".`;
+    ? `请联网搜索以下股票/公司的【最新实时数据】，包括今日股价、涨跌幅、PE、市值，然后进行深度分析："${query}"。
+必须使用最新的网络搜索结果，不要只用训练数据。`
+    : `Search the web for the LATEST real-time data on "${query}" including today's price, day change %, PE ratio, and market cap. Then perform a deep-dive analysis.
+You MUST use live web search results, not just training data.`;
+
+  const body: any = {
+    model: KIMI_MODEL,
+    messages: [
+      { role: 'system', content: isChinese ? KIMI_SYSTEM_ZH : KIMI_SYSTEM_EN },
+      { role: 'user',   content: prompt },
+    ],
+    temperature: 0.7,
+    // Enable Kimi's built-in web search tool
+    tools: [{ type: 'builtin_search' }],
+  };
 
   const response = await fetch(KIMI_API_URL, {
     method: 'POST',
@@ -396,17 +360,34 @@ async function analyzeWithKimi(query: string, language: string) {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: KIMI_MODEL,
-      messages: [
-        { role: 'system', content: isChinese ? KIMI_SYSTEM_ZH : KIMI_SYSTEM_EN },
-        { role: 'user',   content: prompt },
-      ],
-      temperature: 0.7,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
+    // If tools param causes error, retry without it
+    if (response.status === 400 || response.status === 422) {
+      console.warn('[kimi] builtin_search tool rejected, retrying without tools');
+      delete body.tools;
+      const retry = await fetch(KIMI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (!retry.ok) {
+        const err = await retry.text();
+        throw new Error(`Kimi API error ${retry.status}: ${err}`);
+      }
+      const raw = await retry.json();
+      let jsonText: string = raw?.choices?.[0]?.message?.content ?? '';
+      jsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found in Kimi response");
+      const data = JSON.parse(jsonMatch[0]);
+      return { ...data, sources: [] };
+    }
     const err = await response.text();
     throw new Error(`Kimi API error ${response.status}: ${err}`);
   }
@@ -515,41 +496,27 @@ Write in fortune-teller style with humor and some edge.`;
   throw lastErr;
 }
 
-// ─── Claude analysis ──────────────────────────────────────────────────────────
-async function analyzeWithClaude(query: string, language: string) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured on the server.");
-
-  const isChinese = language === 'zh';
-  const prompt = isChinese
-    ? `请对以下股票/公司进行深度分析："${query}"。`
-    : `Perform a deep-dive analysis on: "${query}".`;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      system: isChinese ? CLAUDE_SYSTEM_ZH : CLAUDE_SYSTEM_EN,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Claude API error ${response.status}: ${err}`);
+// ─── Stock analysis with automatic fallback ─────────────────────────────────
+// When model === 'gemini': try Gemini first, if it fails try Kimi as fallback.
+// When model === 'kimi': go directly to Kimi.
+async function analyzeStock(query: string, language: string, model: string) {
+  if (model === 'kimi') {
+    return analyzeWithKimi(query, language);
   }
 
-  const raw = await response.json();
-  let jsonText: string = raw?.content?.[0]?.text ?? '';
-  jsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
-  const data = JSON.parse(jsonText);
-  return { ...data, sources: [] };
+  // Default: Gemini-first with Kimi fallback
+  try {
+    return await analyzeWithGemini(query, language);
+  } catch (geminiErr: any) {
+    console.warn(`[analyze] Gemini failed, falling back to Kimi: ${geminiErr?.message?.slice(0, 120)}`);
+    try {
+      return await analyzeWithKimi(query, language);
+    } catch (kimiErr: any) {
+      // Both failed — throw the original Gemini error (more informative)
+      console.error(`[analyze] Kimi fallback also failed: ${kimiErr?.message?.slice(0, 120)}`);
+      throw geminiErr;
+    }
+  }
 }
 
 // ─── Vercel handler ───────────────────────────────────────────────────────────
@@ -574,11 +541,7 @@ export default async function handler(req: any, res: any) {
     if (hasBazi) {
       // ── Run BOTH calls in PARALLEL so total time = max(stock, fortune) not sum ──
       const [stockResult, fortuneResult] = await Promise.allSettled([
-        model === 'claude'
-          ? analyzeWithClaude(query.trim(), language)
-          : model === 'kimi'
-          ? analyzeWithKimi(query.trim(), language)
-          : analyzeWithGemini(query.trim(), language),
+        analyzeStock(query.trim(), language, model),
         // Fortune reading uses a placeholder thesis since we don't have the stock result yet.
         // We pass the raw query — the fortune AI will determine stock element from the name.
         analyzeCompatibility(
@@ -612,11 +575,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // No BaZi — just stock analysis
-    const result = model === 'claude'
-      ? await analyzeWithClaude(query.trim(), language)
-      : model === 'kimi'
-      ? await analyzeWithKimi(query.trim(), language)
-      : await analyzeWithGemini(query.trim(), language);
+    const result = await analyzeStock(query.trim(), language, model);
 
     return res.status(200).json(result);
   } catch (err: any) {

@@ -346,13 +346,11 @@ const App: React.FC = () => {
                  <div className="flex items-center gap-3 mb-4">
                    <h4 className="text-sm font-semibold text-slate-500">{t.sources}</h4>
                    <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${
-                     model === 'claude'
-                       ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                       : model === 'kimi'
+                     model === 'kimi'
                        ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
                        : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                    }`}>
-                     {model === 'claude' ? '⚡ Claude' : model === 'kimi' ? '🌙 Kimi K2.5' : '🔍 Gemini + Google Search'}
+                     {model === 'kimi' ? '🌙 北京月记' : '🔍 加州谷派 + Google Search'}
                    </span>
                  </div>
                  <div className="flex flex-wrap gap-3">
