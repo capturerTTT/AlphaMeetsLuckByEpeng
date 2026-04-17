@@ -150,9 +150,9 @@ const App: React.FC = () => {
                            (report && !report.stockData.changePercent.startsWith('-'));
 
   const t = {
-    titlePrefix: language === 'en' ? "Where is the " : "",
-    alpha: language === 'en' ? "Alpha" : "宝贝股票",
-    titleSuffix: language === 'en' ? " hiding today?" : "今日运势",
+    titlePrefix: language === 'en' ? "Who is your " : "谁是你的",
+    alpha: language === 'en' ? "Stock Baby" : "股票宝宝",
+    titleSuffix: language === 'en' ? "?" : "？",
     placeholder: language === 'en' ? "Enter ticker (e.g., AMD, 700.HK) or name..." : "输入代码 (如 AMD, 700.HK) 或名称...",
     supportText: language === 'en' ? "Supports US, HK, and CN markets. Data grounded by Google Search." : "支持美股、港股和A股。基于 Google 实时搜索数据。",
     snapshot: language === 'en' ? "Real-time Snapshot" : "实时看板",
@@ -160,7 +160,7 @@ const App: React.FC = () => {
     change: language === 'en' ? "Day Change" : "涨跌幅",
     pe: language === 'en' ? "P/E Ratio" : "市盈率 (TTM)",
     mktCap: language === 'en' ? "Mkt Cap" : "市值",
-    thesisHeader: language === 'en' ? "Analyst's Spicy Diagnosis" : "分析师毒舌号脉",
+    thesisHeader: language === 'en' ? "Love Guru's Verdict" : "恋爱大师一句话点评",
     sources: language === 'en' ? "Live Data Sources" : "实时数据来源",
     noSources: language === 'en' ? "Data synthesized from internal knowledge base." : "数据基于内部知识库综合生成。",
     fortuneLoading: language === 'en' ? "🔮 The master is reading your fate..." : "🔮 大师正在掐指一算，请稍候...",

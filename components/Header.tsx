@@ -25,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ language, setLanguage, onOpenHistory, m
               AlphaMeetsLuck <span className="text-gemini-gold text-[10px] sm:text-xs align-top font-mono">ALPHA</span>
             </h1>
             <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">
-              {language === 'en' ? 'Hedge Fund Fengshui Analyst' : '风水驱动对冲基金分析师'}
+              {language === 'en' ? 'Find a Stock to Fall in Love With' : '找只股票谈恋爱'}
             </p>
           </div>
         </div>

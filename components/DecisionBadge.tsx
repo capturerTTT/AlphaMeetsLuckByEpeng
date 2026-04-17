@@ -19,21 +19,21 @@ const DecisionBadge: React.FC<DecisionBadgeProps> = ({ decision, language }) => 
     case DecisionType.AGGRESSIVE:
       colorClass = 'bg-green-900/50 text-green-400 border-green-500/50';
       icon = <TrendingUp className="w-5 h-5 mr-2" />;
-      label = isEn ? 'AGGRESSIVE' : '激进买入';
-      subLabel = isEn ? 'Strong Buy • High Conviction' : '强力买入 • 高确信度';
+      label = isEn ? 'PURSUE' : '强力追求';
+      subLabel = isEn ? 'Soul Mate • Go All In' : '命中注定 • 大胆表白';
       break;
     case DecisionType.DEFENSIVE:
       colorClass = 'bg-red-900/50 text-red-400 border-red-500/50';
       icon = <TrendingDown className="w-5 h-5 mr-2" />;
-      label = isEn ? 'DEFENSIVE' : '防御减仓';
-      subLabel = isEn ? 'Reduce Exposure • High Risk' : '降低仓位 • 风险警示';
+      label = isEn ? 'RUN AWAY' : '逃吧，不是你的宝贝';
+      subLabel = isEn ? 'Not Your Type • Escape Now' : '有缘无分 • 趁早止损';
       break;
     case DecisionType.NEUTRAL:
     default:
       colorClass = 'bg-yellow-900/50 text-yellow-400 border-yellow-500/50';
       icon = <MinusCircle className="w-5 h-5 mr-2" />;
-      label = isEn ? 'NEUTRAL' : '中立观望';
-      subLabel = isEn ? 'Watchlist • Wait for Setup' : '加入自选 • 等待时机';
+      label = isEn ? 'JUST FRIENDS' : '认识就好';
+      subLabel = isEn ? 'Keep in Touch • No Rush' : '先加微信 • 慢慢了解';
       break;
   }
 
