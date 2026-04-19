@@ -1,4 +1,4 @@
-import QRCode from 'qrcode';
+import qrcode from 'qrcode-generator';
 import { FullReport } from '../services/apiService';
 import { DecisionType } from '../types';
 
@@ -140,11 +140,28 @@ export function getShareDataFromURL(): FullReport | null {
   return null;
 }
 
-export async function generateQRDataURL(url: string, size = 200): Promise<string> {
-  return QRCode.toDataURL(url, {
-    width: size,
-    margin: 2,
-    errorCorrectionLevel: 'M',
-    color: { dark: '#000000', light: '#ffffff' },
-  });
+export function generateQRDataURL(url: string, size = 200): Promise<string> {
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+
+  const moduleCount = qr.getModuleCount();
+  const cell = Math.floor(size / moduleCount);
+  const dim = cell * moduleCount;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = dim;
+  canvas.height = dim;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, dim, dim);
+  ctx.fillStyle = '#000000';
+  for (let r = 0; r < moduleCount; r++) {
+    for (let c = 0; c < moduleCount; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect(c * cell, r * cell, cell, cell);
+    }
+  }
+
+  return Promise.resolve(canvas.toDataURL('image/png'));
 }
