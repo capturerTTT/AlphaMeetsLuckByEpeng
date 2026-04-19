@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import { FullReport } from '../services/apiService';
 import { DecisionType } from '../types';
 
@@ -140,26 +141,10 @@ export function getShareDataFromURL(): FullReport | null {
 }
 
 export async function generateQRDataURL(url: string, size = 200): Promise<string> {
-  try {
-    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=${size}x${size}&bgcolor=ffffff&color=000000&format=png&ecc=M`;
-    const response = await fetch(apiUrl);
-    if (!response.ok) throw new Error(`QR API ${response.status}`);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (e) {
-    console.warn('[QR] API failed, using fallback:', e);
-    const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#ffffff'; ctx.font = `bold ${size / 8}px sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText('扫码查看', size / 2, size / 2 - 8);
-    ctx.fillText('完整报告', size / 2, size / 2 + size / 8 + 4);
-    return canvas.toDataURL('image/png');
-  }
+  return QRCode.toDataURL(url, {
+    width: size,
+    margin: 2,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#ffffff' },
+  });
 }
