@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
 import Header from './components/Header';
 import MatrixCard from './components/MatrixCard';
 import DecisionBadge from './components/DecisionBadge';
@@ -7,19 +6,18 @@ import HistorySidebar from './components/HistorySidebar';
 import CopyButton from './components/CopyButton';
 import BaziInput from './components/BaziInput';
 import CompatibilityPanel from './components/CompatibilityPanel';
-import ShareCard from './components/ShareCard';
-import SharedView from './components/SharedView';
+import SharePageView from './components/SharePageView';
 import { analyzeStock, FullReport } from './services/apiService';
 import { InvestmentReport, Language, ModelProvider, BaziInfo } from './types';
 import { calculatePillars } from './utils/bazi';
-import { getShareDataFromURL, buildShareURL, generateQRDataURL } from './utils/shareUtils';
-import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Share2, BrainCircuit, Sparkles } from 'lucide-react';
+import { getShareDataFromURL, buildShareURL } from './utils/shareUtils';
+import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Sparkles, Share2 } from 'lucide-react';
 
 // Wrapper: check for share link before rendering the main app
 const App: React.FC = () => {
   const sharedReport = getShareDataFromURL();
   if (sharedReport) {
-    return <SharedView report={sharedReport} />;
+    return <SharePageView report={sharedReport} />;
   }
   return <MainApp />;
 };
@@ -33,8 +31,6 @@ const MainApp: React.FC = () => {
   const [fortuneLoading, setFortuneLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [qrDataURL, setQrDataURL] = useState<string>('');
   const [baziInfo, setBaziInfo] = useState<BaziInfo | null>(() => {
     try {
       const saved = localStorage.getItem('baziInfo');
@@ -147,42 +143,10 @@ const MainApp: React.FC = () => {
     }
   }, [language]);
 
-  const handleShare = async () => {
+  const handleGenerateSharePage = () => {
     if (!report) return;
-    setIsCapturing(true);
-
-    try {
-      // 1. Build share URL and generate QR code
-      const shareURL = buildShareURL(report);
-      const qr = await generateQRDataURL(shareURL, 200);
-      setQrDataURL(qr);
-
-      // 2. Wait a frame for the ShareCard to render with the QR
-      await new Promise(r => setTimeout(r, 300));
-
-      // 3. Capture the ShareCard element
-      const shareCard = document.getElementById('share-card');
-      if (shareCard) {
-        const canvas = await html2canvas(shareCard, {
-          backgroundColor: '#0f172a',
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          width: 600,
-        });
-        const image = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        link.href = image;
-        const stockDisplayName = report.stockData.name || query;
-        link.download = `我和${stockDisplayName}谈恋爱了_${date}.png`;
-        link.click();
-      }
-    } catch (e) {
-      console.error("Share image generation failed:", e);
-    } finally {
-      setIsCapturing(false);
-    }
+    const shareURL = buildShareURL(report);
+    window.location.href = shareURL;
   };
 
   const isPositiveChange = report?.stockData.changePercent.startsWith('+') ||
@@ -383,7 +347,19 @@ const MainApp: React.FC = () => {
                 <CompatibilityPanel reading={report.compatibility} language={language} />
               )}
 
-              {/* 5. Sources */}
+              {/* 5. Generate Share Page CTA */}
+              <div className="flex justify-center pt-2">
+                <button
+                  onClick={handleGenerateSharePage}
+                  className="group flex items-center gap-3 px-7 sm:px-10 py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-400 hover:via-purple-400 hover:to-pink-400 text-white font-extrabold text-base sm:text-lg rounded-2xl shadow-2xl shadow-purple-900/40 transition-all hover:scale-[1.03] active:scale-95 border border-white/10"
+                >
+                  <Share2 className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform" />
+                  <span>{language === 'en' ? 'Generate Share Page' : '生成分享页面'}</span>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 opacity-80" />
+                </button>
+              </div>
+
+              {/* 6. Sources */}
               <div className="pt-8 border-t border-slate-800">
                  <div className="flex items-center gap-3 mb-4">
                    <h4 className="text-sm font-semibold text-slate-500">{t.sources}</h4>
@@ -418,27 +394,6 @@ const MainApp: React.FC = () => {
             </div>
           )}
         </main>
-
-        {/* Hidden ShareCard — rendered off-screen for html2canvas capture */}
-        {report && qrDataURL && (
-          <ShareCard report={report} qrDataURL={qrDataURL} stockName={query} />
-        )}
-
-        {/* Floating Share Button */}
-        {report && (
-          <button
-            onClick={handleShare}
-            disabled={isCapturing}
-            className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 bg-gemini-accent hover:bg-sky-400 text-gemini-dark p-3 sm:p-4 rounded-full shadow-xl shadow-sky-900/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 z-30 flex items-center justify-center"
-            title={language === 'en' ? "Share Report" : "分享报告"}
-          >
-            {isCapturing ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
-            ) : (
-              <Share2 className="w-6 h-6" />
-            )}
-          </button>
-        )}
       </div>
     </div>
   );
