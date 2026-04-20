@@ -11,7 +11,7 @@ import { analyzeStock, FullReport } from './services/apiService';
 import { InvestmentReport, Language, ModelProvider, BaziInfo } from './types';
 import { calculatePillars } from './utils/bazi';
 import { getShareDataFromURL, buildShareURL } from './utils/shareUtils';
-import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Sparkles, Share2 } from 'lucide-react';
+import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Sparkles, Share2, BrainCircuit } from 'lucide-react';
 
 // Wrapper: check for share link before rendering the main app
 const App: React.FC = () => {
