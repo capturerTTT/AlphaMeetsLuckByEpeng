@@ -15,10 +15,15 @@ import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Sp
 
 // Wrapper: check for share link before rendering the main app
 const App: React.FC = () => {
-  const sharedReport = getShareDataFromURL();
-  if (sharedReport) {
-    return <SharePageView report={sharedReport} />;
-  }
+  const [sharedReport, setSharedReport] = useState<FullReport | null>(() => getShareDataFromURL());
+
+  useEffect(() => {
+    const onHashChange = () => setSharedReport(getShareDataFromURL());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  if (sharedReport) return <SharePageView report={sharedReport} />;
   return <MainApp />;
 };
 
