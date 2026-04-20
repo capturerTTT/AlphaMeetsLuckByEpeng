@@ -53,17 +53,25 @@ const MainApp: React.FC = () => {
     }
   });
 
-  // Save history whenever it changes
+  // Save history whenever it changes (try/catch for Safari Private Mode)
   useEffect(() => {
-    localStorage.setItem('stockGeminiHistory', JSON.stringify(history));
+    try {
+      localStorage.setItem('stockGeminiHistory', JSON.stringify(history));
+    } catch (e) {
+      console.warn('[storage] history save failed', e);
+    }
   }, [history]);
 
-  // Persist baziInfo to localStorage
+  // Persist baziInfo to localStorage (try/catch for Safari Private Mode)
   useEffect(() => {
-    if (baziInfo) {
-      localStorage.setItem('baziInfo', JSON.stringify(baziInfo));
-    } else {
-      localStorage.removeItem('baziInfo');
+    try {
+      if (baziInfo) {
+        localStorage.setItem('baziInfo', JSON.stringify(baziInfo));
+      } else {
+        localStorage.removeItem('baziInfo');
+      }
+    } catch (e) {
+      console.warn('[storage] baziInfo save failed', e);
     }
   }, [baziInfo]);
 
