@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 import { FullReport } from '../services/apiService';
 import { DecisionType } from '../types';
 import { generateQRDataURL } from '../utils/shareUtils';
-import { Download, Copy, Check, X, Loader2, Heart, Flame, AlertTriangle } from 'lucide-react';
+import { Image as ImageIcon, Copy, Check, X, Loader2, Heart, Flame, AlertTriangle } from 'lucide-react';
 
 interface SharePageViewProps {
   report: FullReport;
@@ -96,11 +96,29 @@ const SharePageView: React.FC<SharePageViewProps> = ({ report, onClose }) => {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  // Playful filename: use AI-generated compat.verdict when present, else decision-based quip
+  const buildFilename = (): string => {
+    const verdict = compat?.verdict?.trim();
+    const DEFAULTS: Record<DecisionType, string> = {
+      [DecisionType.AGGRESSIVE]: `我和${displayName}非Ta不可`,
+      [DecisionType.DEFENSIVE]:  `我和${displayName}八字不合`,
+      [DecisionType.NEUTRAL]:    `我和${displayName}点头之交`,
+    };
+    const phrase = verdict && verdict.length <= 10
+      ? `我和${displayName}${verdict}`
+      : DEFAULTS[report.decision];
+    // Strip filesystem-unsafe characters (Chinese is fine on all modern OSs)
+    const safe = phrase.replace(/[\/\\:*?"<>|\n\r\t]/g, '');
+    return `${safe}.jpg`;
+  };
+
   const captureCard = async (): Promise<Blob | null> => {
     if (!captureRef.current) return null;
-    const dataUrl = await toPng(captureRef.current, {
+    // JPEG @ 0.95 — smaller than PNG, no transparency loss (our poster has solid bg)
+    const dataUrl = await toJpeg(captureRef.current, {
       cacheBust: true,
       pixelRatio: 2,
+      quality: 0.95,
       backgroundColor: '#0f172a',
     });
     const res = await fetch(dataUrl);
@@ -113,18 +131,40 @@ const SharePageView: React.FC<SharePageViewProps> = ({ report, onClose }) => {
     try {
       const blob = await captureCard();
       if (!blob) throw new Error('Capture failed');
+      const filename = buildFilename();
+      const file = new File([blob], filename, { type: 'image/jpeg' });
+
+      // Preferred path: Web Share API with file — on iOS/Android this opens the
+      // native share sheet, which has "存储图像 / Save Image" → goes straight to
+      // Photos/相册 (the user's actual ask). Also offers direct WeChat/IG share.
+      const canShareFile = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+      if (canShareFile) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename.replace(/\.jpg$/, ''),
+            text: '找只股票谈恋爱 · alphameetsluck.com',
+          });
+          return;
+        } catch (shareErr: any) {
+          // User tapped cancel — don't fall through to download
+          if (shareErr?.name === 'AbortError') return;
+          // Any other error: fall through to download path below
+        }
+      }
+
+      // Fallback (desktop, or iOS < 15): classic download to Downloads folder
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const safeName = displayName.replace(/[\/\\:*?"<>|]/g, '_');
-      a.download = `AlphaMeetsLuck_${safeName}_${symbol}.png`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e: any) {
       console.error('Save image failed', e);
-      setErrorMsg('图片保存失败，请截屏分享 📸');
+      setErrorMsg('保存失败，请长按上方图片手动保存 📸');
     } finally {
       setSaving(false);
     }
@@ -138,17 +178,18 @@ const SharePageView: React.FC<SharePageViewProps> = ({ report, onClose }) => {
       if (!blob) throw new Error('Capture failed');
       // ClipboardItem may not exist on older Safari
       if (typeof (window as any).ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
-        setErrorMsg('当前浏览器不支持复制图片，请改用"下载图片"');
+        setErrorMsg('当前浏览器不支持复制图片，请改用"保存图片"');
         return;
       }
+      // MIME must match the blob type — we now emit JPEG
       await navigator.clipboard.write([
-        new (window as any).ClipboardItem({ 'image/png': blob }),
+        new (window as any).ClipboardItem({ 'image/jpeg': blob }),
       ]);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch (e: any) {
       console.error('Copy image failed', e);
-      setErrorMsg('图片复制失败，请改用"下载图片"');
+      setErrorMsg('图片复制失败，请改用"保存图片"');
     } finally {
       setSaving(false);
     }
@@ -161,7 +202,7 @@ const SharePageView: React.FC<SharePageViewProps> = ({ report, onClose }) => {
     >
       {/* Top control bar */}
       <div className="sticky top-0 z-10 bg-slate-950/85 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <div className="text-xs sm:text-sm text-slate-400">📸 长按图片可保存 · 或点下方按钮</div>
+        <div className="text-xs sm:text-sm text-slate-400">📸 点下方按钮保存到相册 / 长按图片也可存</div>
         <button
           onClick={(e) => { e.stopPropagation(); onClose(); }}
           className="p-2 hover:bg-slate-800 rounded-lg text-slate-300"
@@ -339,8 +380,8 @@ const SharePageView: React.FC<SharePageViewProps> = ({ report, onClose }) => {
               disabled={saving}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-indigo-400 hover:to-pink-400 disabled:opacity-60 disabled:cursor-wait text-white font-bold rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-900/30"
             >
-              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-              <span>{saving ? '生成中…' : '下载图片'}</span>
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+              <span>{saving ? '生成中…' : '保存图片'}</span>
             </button>
             <button
               onClick={handleCopyImage}
@@ -356,8 +397,9 @@ const SharePageView: React.FC<SharePageViewProps> = ({ report, onClose }) => {
               {errorMsg}
             </div>
           )}
-          <p className="text-center text-[11px] text-slate-500">
-            iOS 用户也可<span className="text-slate-300">长按上方图片</span>直接保存
+          <p className="text-center text-[11px] text-slate-500 leading-relaxed">
+            📱 手机端会弹出分享面板，选<span className="text-slate-300 font-semibold">"存储图像"</span>即存入相册<br />
+            💻 电脑端将下载到 Downloads 文件夹
           </p>
         </div>
 
