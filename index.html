@@ -45,30 +45,13 @@
 </head>
   <body>
     <div id="root">
-      <div id="boot-fallback" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;color:#cbd5e1;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:20px;text-align:center">
+      <div id="boot-fallback" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;color:#cbd5e1;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center">
         <div>
           <div style="font-size:48px;margin-bottom:16px">🔮</div>
-          <div style="font-size:18px;margin-bottom:8px">加载中...</div>
-          <div id="boot-detail" style="font-size:12px;color:#64748b;margin-top:16px">Loading AlphaMeetsLuck...</div>
+          <div style="font-size:16px;color:#94a3b8">加载中…</div>
         </div>
       </div>
     </div>
-    <script>
-      // Safari cache-buster: if React doesn't mount in 8s, show recovery instructions
-      window.__bootStart = Date.now();
-      window.__bootTimeout = setTimeout(function() {
-        var fallback = document.getElementById('boot-fallback');
-        if (fallback && document.getElementById('root').children.length === 1) {
-          fallback.innerHTML = '<div style="max-width:420px"><div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
-            '<div style="font-size:18px;margin-bottom:12px;color:#f59e0b">页面加载失败 / Load Failed</div>' +
-            '<div style="font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:20px">Safari 缓存了旧版本。请尝试：<br/>' +
-            '1. Safari 菜单 → 设置 → 隐私 → 管理网站数据 → 删除本站数据<br/>' +
-            '2. 或使用 Chrome/Firefox 打开<br/>' +
-            '3. 或菜单栏 开发 → 清空缓存 (Cmd+Opt+E)</div>' +
-            '<button onclick="location.reload(true)" style="padding:10px 24px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px">强制刷新 / Force Reload</button></div>';
-        }
-      }, 8000);
-    </script>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

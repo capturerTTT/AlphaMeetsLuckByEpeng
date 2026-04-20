@@ -10,22 +10,9 @@ import SharePageView from './components/SharePageView';
 import { analyzeStock, FullReport } from './services/apiService';
 import { InvestmentReport, Language, ModelProvider, BaziInfo } from './types';
 import { calculatePillars } from './utils/bazi';
-import { getShareDataFromURL, buildShareURL } from './utils/shareUtils';
 import { Search, Loader2, ArrowRight, ExternalLink, AlertTriangle, RotateCcw, Sparkles, Share2, BrainCircuit } from 'lucide-react';
 
-// Wrapper: check for share link before rendering the main app
-const App: React.FC = () => {
-  const [sharedReport, setSharedReport] = useState<FullReport | null>(() => getShareDataFromURL());
-
-  useEffect(() => {
-    const onHashChange = () => setSharedReport(getShareDataFromURL());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
-
-  if (sharedReport) return <SharePageView report={sharedReport} />;
-  return <MainApp />;
-};
+const App: React.FC = () => <MainApp />;
 
 const MainApp: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -36,6 +23,7 @@ const MainApp: React.FC = () => {
   const [fortuneLoading, setFortuneLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [baziInfo, setBaziInfo] = useState<BaziInfo | null>(() => {
     try {
       const saved = localStorage.getItem('baziInfo');
@@ -158,8 +146,7 @@ const MainApp: React.FC = () => {
 
   const handleGenerateSharePage = () => {
     if (!report) return;
-    const shareURL = buildShareURL(report);
-    window.location.href = shareURL;
+    setShowShareModal(true);
   };
 
   const isPositiveChange = report?.stockData.changePercent.startsWith('+') ||
@@ -408,6 +395,11 @@ const MainApp: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Share modal — opens in-place, no URL navigation, QR points to homepage */}
+      {showShareModal && report && (
+        <SharePageView report={report} onClose={() => setShowShareModal(false)} />
+      )}
     </div>
   );
 };
